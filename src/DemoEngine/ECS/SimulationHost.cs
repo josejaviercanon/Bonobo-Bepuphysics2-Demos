@@ -42,6 +42,7 @@ public sealed class SimulationHost : IDisposable
     private DemoWorldConfig? _worldConfig = DemoWorldConfig.Default;
     private DemoModuleEntry? _activeModule;
     private IDemoSimulation? _activeSim;
+    private PinnedRenderBuffer<double>? _activeBuffer;
     private string? _activeGame;
 
     private double _accumulator;
@@ -119,6 +120,9 @@ public sealed class SimulationHost : IDisposable
             lock (_sync) return _droppedInputs;
         }
     }
+
+    /// <summary>Test/diagnostic probe: per-connect pinned signal buffers released on stop.</summary>
+    internal int DisposedSignalBufferCount { get; private set; }
 
     /// <summary>Payload-free module verb routing (<c>/api/{game}/{verb}</c> from the page).</summary>
     public bool SendCommand(string game, string verb)
@@ -237,6 +241,7 @@ public sealed class SimulationHost : IDisposable
                 var buffer = CreateBuffer(module.SignalName, module.Capacity);
                 _activeModule = module;
                 _activeSim = module.Create(_worldConfig, buffer);
+                _activeBuffer = buffer;
             }
 
             _activeGame = game;
@@ -263,6 +268,15 @@ public sealed class SimulationHost : IDisposable
         {
             _activeSim.Dispose();
             _activeSim = null;
+        }
+
+        // The per-connect pinned signal buffer owns a GCHandle: release it here so switching
+        // demos never accumulates pinned arrays (the menu key reaches this path on purpose).
+        if (_activeBuffer is not null)
+        {
+            _activeBuffer.Dispose();
+            _activeBuffer = null;
+            DisposedSignalBufferCount++;
         }
 
         _activeModule = null;

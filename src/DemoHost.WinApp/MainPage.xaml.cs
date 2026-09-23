@@ -118,7 +118,11 @@ public sealed partial class MainPage : Page
         switch (verb)
         {
             case "connect":
+                // Connect stops the previous simulation and releases its pinned signal buffer,
+                // so the old shared mappings (and any queued frame) are dead weight: drop them
+                // before the new sim starts committing.
                 _simHost.Connect(value);
+                DisposeChannels();
                 break;
             case "pause":
                 _simHost.SetPaused(value == "1");
@@ -196,6 +200,22 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    ///     Releases the per-signal WebView2 shared buffers and any queued frame. Called on every
+    ///     connect (the previous sim's pinned buffer is gone) and on shutdown.
+    /// </summary>
+    private void DisposeChannels()
+    {
+        lock (_pendingSync)
+        {
+            _pending.Clear();
+        }
+
+        foreach (var channel in _channels.Values)
+            channel.Dispose();
+        _channels.Clear();
+    }
+
     /// <summary>Stops the simulation and releases the WebView2 shared buffers.</summary>
     public void Shutdown()
     {
@@ -205,9 +225,7 @@ public sealed partial class MainPage : Page
         _inputChannel = null;
         _assetServer?.Dispose();
         _assetServer = null;
-        foreach (var channel in _channels.Values)
-            channel.Dispose();
-        _channels.Clear();
+        DisposeChannels();
         _core = null;
     }
 }

@@ -57,6 +57,30 @@ export async function guiControlVisible(page: Page, controlName: string): Promis
   }, controlName);
 }
 
+/** Enabled state of the named GUI control (the pending-port menu cards are disabled). */
+export async function guiControlEnabled(page: Page, controlName: string): Promise<boolean | null> {
+  return page.evaluate((name) => {
+    const scene = (window as unknown as { __scene?: { textures: Array<{ getControlByName?: (n: string) => { isEnabled: boolean } | null }> } })
+      .__scene;
+    if (!scene) return null;
+
+    for (const texture of scene.textures) {
+      const control = texture.getControlByName?.(name);
+      if (control) return control.isEnabled;
+    }
+    return null;
+  }, controlName);
+}
+
+/** True when any live GUI texture exposes a control with the given name. */
+export async function guiControlExists(page: Page, controlName: string): Promise<boolean> {
+  return page.evaluate((name) => {
+    const scene = (window as unknown as { __scene?: { textures: Array<{ getControlByName?: (n: string) => unknown }> } })
+      .__scene;
+    return !!scene?.textures?.some((texture) => !!texture.getControlByName?.(name));
+  }, controlName);
+}
+
 /** Text content of the named GUI control (test-only readout for the stats overlay). */
 export async function guiControlText(page: Page, controlName: string): Promise<string | null> {
   return page.evaluate((name) => {

@@ -30,6 +30,10 @@ generators; this repo hand-writes both (`DemoEngine.Inputs.InputDispatcher`,
 - `src/DemoHost.WinApp` runs the simulations in-process (`SimulationHost` mirror) and
   publishes committed pinned buffers via `CoreWebView2SharedBuffer` + `PostSharedBufferToScript`
   (ReadOnly, 3-buffer rotation). No JSON, no per-entity interop.
+- Scene switching is a memory-reset boundary: `Connect(game)` stops the previous simulation and
+  disposes its per-connect pinned signal buffer (`GCHandle.Free`), and the page drops the old
+  shared-buffer channels (`MainPage.DisposeChannels`). The main menu connects the reserved
+  `menu` key — unknown to the host by design — so the engine idles with zero demos resident.
 - Input is the ReadWrite shared ring (`SharedInputChannel`): the page writes records and
   publishes the head with `Atomics.store`; the host polls on its dispatcher timer. One
   low-frequency message path exists for commands (`connect`, `pause`, `command:{game}:{verb}`).

@@ -113,8 +113,8 @@ function registerProvider() {
     // Ask the host for the writable input mapping once the provider (and therefore
     // provider.getInputViews) exists. The page re-sends this after every reload.
     webview.postMessage('input-hello');
-    // The desktop host boots straight into the first fixture scene.
-    void window.initGame('render-viewport', 'simple-self-contained');
+    // The desktop host boots into the main menu; live cards connect their fixture sim.
+    void window.initGame('render-viewport', 'menu');
 }
 
 if (typeof window.initGame === 'function' && typeof window.registerLocalBufferProvider === 'function') {

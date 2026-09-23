@@ -17,7 +17,7 @@ library, the ECS mapping and the host bridge.
 | `src/DemoEngine` | Self-contained mirror of the Bonobo engine ABI: pinned buffers, signal header/layout, fixed-step host loop, input ring, module registry |
 | `src/Game.BepuDemos` | Ported demos (`Bonobo.Bepuphysics2` + `Bonobo.ECS` / `Bonobo.ECS.SourceGenerators`) |
 | `src/DemoHost.WinApp` | WinUI 3 + WebView2 + Native AOT host (only host target) |
-| `src/BepuDemos.UI` | Babylon.js v9 frontend: demo scenes, switcher GUI, zero-copy decoders |
+| `src/BepuDemos.UI` | Babylon.js v9 frontend: main menu (30-demo grid), demo scenes, zero-copy decoders |
 | `src/Game.BepuDemos.Tests` | xUnit v3 unit/determinism/layout tests |
 | `src/Game.BepuDemos.Tests.Aot` | TUnit AOT/trim pattern checks |
 | `src/Game.Tests.UI` | Playwright E2E over CDP (WebView2) with screenshots |
@@ -51,8 +51,14 @@ npm run test:e2e
 
 ## Demo scenes
 
+The app boots into the **main menu** (`menu`): a 30-card grid of the upstream DemoSet in
+`docs/compat-review.md` order. The four ported demos are live cards; the remaining 26 are
+disabled "(soon)" placeholders. Every demo scene has a `Menu` back button; switching scenes
+disposes the Babylon scene and releases the C# simulation + its pinned signal buffer.
+
 | Scene key | Upstream demo | Notes |
 | --- | --- | --- |
+| `menu` | — | 30-demo card grid; host stays idle (`menu` is an unknown sim key) |
 | `simple-self-contained` | SimpleSelfContainedDemo | sphere on a static floor + ECS orbit markers, tap-to-fire |
 | `pyramid` | PyramidDemo | 12 box pyramids (upstream 40), click cannonball |
 | `bounciness` | BouncinessDemo | 40×40 material sweep (upstream 100×100), 8 substeps |
@@ -68,5 +74,8 @@ The remaining 26 demos and their porting status live in `docs/compat-review.md`.
 - Physics is authoritative in C#: deterministic null-`ThreadDispatcher` solves.
 - Presentation-only concerns (camera, GUI, shaders, terrain visuals, cloth display) are
   client-side and never feed simulation state back except through the input ring.
+- Memory reset on scene switch: the Babylon scene (meshes, materials, GUI textures) is
+  disposed, `SimulationHost.Connect` stops the previous sim and frees its pinned signal
+  buffer's `GCHandle`, and the host drops the old WebView2 shared-buffer channels.
 - AOT: no runtime reflection, no dynamic IL; ECS components register through
   `Bonobo.ECS.SourceGenerators` generated code.

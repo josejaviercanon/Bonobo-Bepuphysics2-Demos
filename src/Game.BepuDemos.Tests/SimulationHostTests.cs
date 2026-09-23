@@ -48,6 +48,28 @@ public class SimulationHostTests
     }
 
     [Fact]
+    public void Connect_ReleasesThePreviousPinnedBuffer_AndMenuKeyIdles()
+    {
+        using var host = CreateHost(out _);
+        host.Connect("simple-self-contained");
+        host.Tick(1.0 / 60.0);
+        Assert.NotNull(host.ActiveSimulation);
+        Assert.Equal(0, host.DisposedSignalBufferCount);
+
+        // The menu key is unknown by design: the sim stops and its pinned GCHandle is freed.
+        host.Connect("menu");
+        Assert.Null(host.ActiveSimulation);
+        Assert.Equal(1, host.DisposedSignalBufferCount);
+
+        // A fresh connect allocates a new buffer; switching away releases it again.
+        host.Connect("pyramid");
+        Assert.NotNull(host.ActiveSimulation);
+        Assert.Equal(1, host.DisposedSignalBufferCount);
+        host.Connect("simple-self-contained");
+        Assert.Equal(2, host.DisposedSignalBufferCount);
+    }
+
+    [Fact]
     public void Tick_RunsCappedFixedSteps_AndPublishesGlobalsClock()
     {
         using var host = CreateHost(out var commits);

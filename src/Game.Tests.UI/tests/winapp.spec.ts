@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from './winapp.fixture';
-import { clickGuiControl, guiControlMeasure } from './gui';
+import { clickGuiControl, guiControlExists, guiControlMeasure } from './gui';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // src/Game.Tests.UI/tests -> repo root -> docs/screenshots
@@ -51,8 +51,9 @@ const readStats = (page: import('@playwright/test').Page) =>
   });
 
 /**
- * Ensures the `simple-self-contained` fixture is the active scene (earlier spec files may
- * have switched to another demo) by clicking its switcher button when the hook is absent.
+ * Ensures the `simple-self-contained` fixture is the active scene (earlier spec files may have
+ * left another demo or the main menu active). The menu is the boot scene; demos expose a
+ * `Menu` back button, so navigation is: back to menu (if needed) -> live card.
  */
 async function ensureSimpleScene(page: import('@playwright/test').Page): Promise<void> {
   await expect
@@ -63,23 +64,29 @@ async function ensureSimpleScene(page: import('@playwright/test').Page): Promise
           const scene = hooks.__scene as unknown as {
             textures?: Array<{ getControlByName?: (name: string) => unknown }>;
           } | undefined;
-          return {
-            hasHook: !!hooks.__simpleSelfContained,
-            hasSwitcher: !!scene?.textures?.some((texture) =>
-              texture.getControlByName?.('btn-scene-simple-self-contained')),
-          };
+          const hasMenuCard = !!scene?.textures?.some((texture) =>
+            texture.getControlByName?.('btn-menu-simple-self-contained'));
+          const hasBackButton = !!scene?.textures?.some((texture) =>
+            texture.getControlByName?.('btn-scene-menu'));
+          return !!hooks.__simpleSelfContained || hasMenuCard || hasBackButton;
         }),
       { timeout: 60_000 }
     )
-    .toEqual({ hasHook: expect.anything(), hasSwitcher: true });
+    .toBe(true);
 
   const active = await page.evaluate(() => !!(window as unknown as HostHooks).__simpleSelfContained);
-  if (!active) {
-    await clickGuiControl(page, 'btn-scene-simple-self-contained');
-    await expect.poll(() => page.evaluate(() => !!(window as unknown as HostHooks).__simpleSelfContained), {
-      timeout: 30_000,
-    }).toBe(true);
+  if (active) return;
+
+  if (!(await guiControlExists(page, 'btn-menu-simple-self-contained'))) {
+    await clickGuiControl(page, 'btn-scene-menu');
+    await expect.poll(() => guiControlExists(page, 'btn-menu-simple-self-contained'), { timeout: 30_000 })
+      .toBe(true);
   }
+
+  await clickGuiControl(page, 'btn-menu-simple-self-contained');
+  await expect.poll(() => page.evaluate(() => !!(window as unknown as HostHooks).__simpleSelfContained), {
+    timeout: 30_000,
+  }).toBe(true);
 }
 
 const postSimCommand = (page: import('@playwright/test').Page, command: string) =>
@@ -106,13 +113,13 @@ async function canvasColorCount(page: import('@playwright/test').Page): Promise<
 }
 
 /**
- * DemoHost (WebView2) E2E: the window boots the `simple-self-contained` fixture from the
- * loopback `LocalAssetServer`, the C# host streams the pinned float64 signal into a shared
- * buffer, and Babylon writes the records into thin instances. Commands ride the
- * intentionally low-frequency message path; taps ride the ReadWrite zero-copy input ring.
+ * DemoHost (WebView2) E2E: the window boots the main menu, the page enters the
+ * `simple-self-contained` fixture through its live card, the C# host streams the pinned float64
+ * signal into a shared buffer, and Babylon writes the records into thin instances. Commands
+ * ride the intentionally low-frequency message path; taps ride the ReadWrite zero-copy input ring.
  */
 test.describe('DemoHost (WebView2)', () => {
-  test('boots the simple-self-contained fixture and renders it', async ({ winAppPage: page }) => {
+  test('renders the simple-self-contained fixture entered from the menu', async ({ winAppPage: page }) => {
     const errors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') errors.push(msg.text());

@@ -2,7 +2,6 @@ import { Engine } from '@babylonjs/core/Engines/engine';
 import type { Scene } from '@babylonjs/core/scene';
 import { AdvancedDynamicTexture } from '@babylonjs/gui/2D/advancedDynamicTexture';
 import { Button } from '@babylonjs/gui/2D/controls/button';
-import { StackPanel } from '@babylonjs/gui/2D/controls/stackPanel';
 import { TextBlock } from '@babylonjs/gui/2D/controls/textBlock';
 import { Control } from '@babylonjs/gui/2D/controls/control';
 import { getLocalBufferProvider, connectSignalStream, type LocalBufferProvider, type SignalStream } from './signalSource';
@@ -16,7 +15,7 @@ const dbg = (...args: unknown[]) => console.log('[bepu-demos]', ...args);
 export interface SceneDefinition {
     /** Sim host game key — `/api/{gameKey}/connect` stops the old sim and starts this one. */
     gameKey: string;
-    /** Human label for the top-bar switcher. */
+    /** Human label for the scene (registry metadata; the menu owns its own card labels). */
     label: string;
     create: (engine: Engine, canvas: HTMLCanvasElement) => Promise<SceneHandle>;
 }
@@ -104,9 +103,9 @@ export async function switchScene(name: string): Promise<void> {
     try {
         handle = await definition.create(engine!, canvas!);
         window.__scene = handle.scene;
-        // Mark active before building the switcher so the current scene highlights correctly.
+        // Mark active before building the overlay so the back button hides on the menu itself.
         activeSceneName = name;
-        buildSwitcher(handle.scene);
+        buildBackButton(handle.scene);
         buildStats(handle.scene);
     } catch (err) {
         loaded = false;
@@ -139,40 +138,29 @@ export function postCommandToSim(path: string): void {
     provider.postCommand(path);
 }
 
-/** Top-bar scene switcher (rebuilt per scene; disposed with the scene). */
-function buildSwitcher(scene: Scene): void {
-    const gui = AdvancedDynamicTexture.CreateFullscreenUI('switcher', true, scene);
+/** Top-left "Menu" button on every non-menu scene (rebuilt per scene; disposed with it). */
+function buildBackButton(scene: Scene): void {
+    if (activeSceneName === 'menu') return;
+
+    const gui = AdvancedDynamicTexture.CreateFullscreenUI('back-button', true, scene);
     gui.idealWidth = 1920;
 
-    const panel = new StackPanel('switcher-panel');
-    panel.isVertical = false;
-    panel.width = `${Object.keys(scenes).length * 208}px`;
-    panel.height = '44px';
-    panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-    panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    panel.left = '16px';
-    panel.top = '12px';
+    const button = Button.CreateSimpleButton('btn-scene-menu', 'Menu');
+    button.width = '120px';
+    button.height = '40px';
+    button.color = '#e2e8f0';
+    button.background = '#1e293b';
+    button.cornerRadius = 8;
+    button.fontSize = 15;
+    button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    button.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    button.left = '16px';
+    button.top = '12px';
+    button.onPointerClickObservable.add(() => {
+        void switchScene('menu');
+    });
 
-    for (const [name, definition] of Object.entries(scenes)) {
-        const active = name === activeSceneName;
-        const button = Button.CreateSimpleButton(`btn-scene-${name}`, definition.label);
-        button.width = '200px';
-        button.height = '40px';
-        button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        button.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        button.color = active ? '#0f172a' : '#e2e8f0';
-        button.background = active ? '#7dd3fc' : '#1e293b';
-        button.cornerRadius = 8;
-        button.fontSize = 15;
-        button.paddingLeft = '10px';
-        button.paddingRight = '10px';
-        button.onPointerClickObservable.add(() => {
-            if (name !== activeSceneName) void switchScene(name);
-        });
-        panel.addControl(button);
-    }
-
-    gui.addControl(panel);
+    gui.addControl(button);
 }
 
 /** Top-right debug stats (FPS, sim clock, instance counts). */
