@@ -1,0 +1,16 @@
+{
+  "name": "bonobo-bepuphysics2-demos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BepuPhysics2 demo test bed: ported upstream demos as AOT-safe Bonobo.ECS simulations, rendered by Babylon.js v9 through the zero-copy 64-bit shared-memory signal bridge. Compatibility review against the Bonobo engine.",
+  "type": "module",
+  "workspaces": [
+    "src/BepuDemos.UI"
+  ],
+  "scripts": {
+    "build": "npm run build -w bepu-demos-ui",
+    "watch:js": "npm run watch:js -w bepu-demos-ui",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:e2e": "npm --prefix src/Game.Tests.UI run test:winapp"
+  }
+}

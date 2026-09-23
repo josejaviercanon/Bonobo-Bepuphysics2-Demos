@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Self-contained mirror of the Bonobo engine's zero-copy host seam (pinned 64-bit signal
+    buffers, fixed-step loop, input ring, module registry). This repo does not reference the
+    engine; the constants and the observable behavior are mirrored locally and pinned by
+    Game.BepuDemos.Tests (see docs/compat-review.md).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

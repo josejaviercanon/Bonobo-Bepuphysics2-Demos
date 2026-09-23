@@ -1,0 +1,18 @@
+{
+  "name": "bepu-demos-tests-ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Playwright E2E suite for the BepuPhysics2 demo host (WinUI 3 + WebView2 over CDP).",
+  "scripts": {
+    "test": "playwright test --config=playwright.winapp.config.ts",
+    "test:winapp": "playwright test --config=playwright.winapp.config.ts",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2"
+  }
+}

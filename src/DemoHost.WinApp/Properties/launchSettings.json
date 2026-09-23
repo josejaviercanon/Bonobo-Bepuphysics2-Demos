@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Game.WinApp (Unpackaged)": {
+      "commandLineArgs": "--verbose",
+      "commandName": "Project"
+    },    
+    // babylonjs expect to be able to load files from the filesystem, which is not possible in MSIX packaging    
+    //"Game.WinApp (Package)": {
+    //  "commandLineArgs": "--verbose",
+    //  "commandName": "MsixPackage"
+    //}*/
+  }
+}

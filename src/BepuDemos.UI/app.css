@@ -1,0 +1,17 @@
+/* Host shell base styles (the Babylon canvas fills #render-viewport). */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #0b1120;
+    color: #e2e8f0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+#render-viewport {
+    position: fixed;
+    inset: 0;
+    display: block;
+    z-index: 2;
+}

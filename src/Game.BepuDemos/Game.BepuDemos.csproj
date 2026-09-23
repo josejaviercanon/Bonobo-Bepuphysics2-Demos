@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Ported BepuPhysics2 demos as AOT-safe test fixtures.
+
+    Physics: Bonobo.Bepuphysics2 1.0.0 (namespace-rebranded BepuPhysics2; namespaces
+    Bonobo.Bepuphysics2 / Bonobo.BepuUtilities).
+    ECS: Bonobo.ECS 1.0.1 (Bonobo.ECS.Core) + Bonobo.ECS.SourceGenerators 1.0.0
+    ([Component] AOT registry + [Query] systems). The generator ships inside Bonobo.ECS too,
+    so its analyzer assets are excluded there to run it exactly once.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bonobo.Bepuphysics2" Version="1.0.0" />
+    <PackageReference Include="Bonobo.ECS" Version="1.0.1">
+      <ExcludeAssets>analyzers</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="Bonobo.ECS.SourceGenerators" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DemoEngine\DemoEngine.csproj" />
+  </ItemGroup>
+
+</Project>

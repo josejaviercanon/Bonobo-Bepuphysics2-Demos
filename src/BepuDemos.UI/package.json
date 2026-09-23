@@ -1,0 +1,24 @@
+{
+  "name": "bepu-demos-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Babylon.js v9 frontend for the Bonobo.Bepuphysics2 demo test bed: zero-copy Float64Array scenes over the WinApp (WebView2) host bridge.",
+  "type": "module",
+  "scripts": {
+    "build:js": "vite build",
+    "build": "npm run build:js",
+    "watch:js": "vite build --watch",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.0.0",
+    "@babylonjs/gui": "^9.26.0",
+    "@babylonjs/loaders": "^9.0.0",
+    "@babylonjs/materials": "^9.27.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  }
+}

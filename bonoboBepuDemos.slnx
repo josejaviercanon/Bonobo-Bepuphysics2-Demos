@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <!-- Self-contained compat layer: pinned 64-bit signal buffers, fixed-step host loop,
+         input ring, module registry (mirrors the Bonobo engine ABI). -->
+    <Project Path="src/DemoEngine/DemoEngine.csproj" />
+    <!-- Ported BepuPhysics2 demos (Bonobo.Bepuphysics2 + Bonobo.ECS test fixtures). -->
+    <Project Path="src/Game.BepuDemos/Game.BepuDemos.csproj" />
+    <!-- WinUI 3 + WebView2 + Native AOT test host (the only host target of this repo). -->
+    <Project Path="src/DemoHost.WinApp/DemoHost.WinApp.csproj" />
+    <Project Path="src/Game.BepuDemos.Tests/Game.BepuDemos.Tests.csproj" />
+    <Project Path="src/Game.BepuDemos.Tests.Aot/Game.BepuDemos.Tests.Aot.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,127 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    WinUI 3 + WebView2 + Native AOT host for the BepuPhysics2 demo test bed.
+    Runs the C# simulations in-process and publishes committed pinned buffers to the
+    Babylon.js page through WebView2 shared buffers (zero-copy, pure float64).
+    Host pattern adapted from the Bonobo engine's Game.WinApp (MIT, see THIRD-PARTY-NOTICES.md).
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>DemoHost</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+    <PublishProfile Condition="Exists('Properties\PublishProfiles\win-$(Platform).pubxml')">win-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <InvariantTimezone>true</InvariantTimezone>
+
+    <!-- Native AOT (AOT_STRICT_COMPLIANCE): no reflection in the demo closure. -->
+    <PublishAot>true</PublishAot>
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <IlcInstructionSet>native</IlcInstructionSet>
+    <EventSourceSupport>false</EventSourceSupport>
+    <StackTraceSupport>false</StackTraceSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DemoEngine\DemoEngine.csproj" />
+    <ProjectReference Include="..\Game.BepuDemos\Game.BepuDemos.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\AppIcon.ico" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.6.1" />
+  </ItemGroup>
+
+  <!-- Publish behavior: Release is unpackaged + self-contained (one native exe + wwwroot). -->
+  <PropertyGroup>
+    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <PublishReadyToRun Condition="'$(PublishAot)' == 'true'">False</PublishReadyToRun>
+    <WindowsPackageType Condition="'$(Configuration)' == 'Release'">None</WindowsPackageType>
+    <WindowsAppSDKSelfContained Condition="'$(Configuration)' == 'Release'">true</WindowsAppSDKSelfContained>
+    <SelfContained Condition="'$(Configuration)' == 'Release'">true</SelfContained>
+    <SelfContained Condition="'$(Configuration)' == 'Debug'">false</SelfContained>
+    <!-- Bonobo.ECS reports IL3050 for ComponentRegistry.SizeOf(Type): the non-generic
+         reflection fallback. Components register through the generated generic registry,
+         so the path is dead here. -->
+    <NoWarn Condition="'$(Configuration)' != 'Debug'">$(NoWarn);IL3050</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Frontend bundle pipeline: copy the Vite output (src/BepuDemos.UI/wwwroot/dist) into
+    $(OutDir)wwwroot before Build and mirror it into $(PublishDir)wwwroot after Publish.
+    WinUI Content globs are evaluated at project load, so target-time copies are required.
+    Build the bundle with `npm run build` at the repo root; -p:BuildFrontend=true runs it.
+  -->
+  <PropertyGroup>
+    <BepuDemosUISourceDir Condition="'$(BepuDemosUISourceDir)' == ''">$(MSBuildProjectDirectory)\..\BepuDemos.UI\wwwroot</BepuDemosUISourceDir>
+    <BepuDemosWorkspaceDir Condition="'$(BepuDemosWorkspaceDir)' == ''">$(MSBuildProjectDirectory)\..\..</BepuDemosWorkspaceDir>
+    <BuildFrontend Condition="'$(BuildFrontend)' == ''">false</BuildFrontend>
+  </PropertyGroup>
+
+  <Target Name="BuildBepuDemosFrontend" BeforeTargets="CopyBepuDemosBundle" Condition="'$(BuildFrontend)' == 'true'">
+    <Exec Command="npm run build" WorkingDirectory="$(BepuDemosWorkspaceDir)" />
+  </Target>
+
+  <Target Name="CopyBepuDemosBundle" BeforeTargets="Build">
+    <Error Condition="!Exists('$(BepuDemosUISourceDir)\dist\game-bundle.js')"
+           Text="Frontend bundle '$(BepuDemosUISourceDir)\dist\game-bundle.js' is missing. Run 'npm ci &amp;&amp; npm run build' at the repo root, or build with -p:BuildFrontend=true." />
+    <RemoveDir Directories="$(OutDir)wwwroot\dist" />
+    <ItemGroup>
+      <_BepuDemosBundle Include="$(BepuDemosUISourceDir)\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_BepuDemosBundle)" DestinationFiles="@(_BepuDemosBundle->'$(OutDir)wwwroot\dist\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyBepuDemosBundleToPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+    <RemoveDir Directories="$(PublishDir)wwwroot\dist" />
+    <ItemGroup>
+      <_BepuDemosBundlePublish Include="$(BepuDemosUISourceDir)\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_BepuDemosBundlePublish)" DestinationFiles="@(_BepuDemosBundlePublish->'$(PublishDir)wwwroot\dist\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!--
+    WinUI compiles XAML into .xbf next to the app assembly and MRT resources into
+    `DemoHost.WinApp.pri`; `dotnet publish` does not carry those into the publish folder,
+    so mirror them explicitly (same fix as the engine host).
+  -->
+  <Target Name="CopyWinUIXamlResourcesToPublish" AfterTargets="Publish" Condition="'$(PublishDir)' != ''">
+    <ItemGroup>
+      <_WinUIXamlResource Include="$(OutDir)**\*.xbf" />
+      <_WinUIXamlResource Include="$(OutDir)$(AssemblyName).pri" Condition="Exists('$(OutDir)$(AssemblyName).pri')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_WinUIXamlResource)" DestinationFiles="@(_WinUIXamlResource->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

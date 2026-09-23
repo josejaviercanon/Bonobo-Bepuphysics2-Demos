@@ -427,3 +427,14 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# solution items
+Temp/
+
+# Node / Vite / Playwright artifacts
+node_modules/
+**/wwwroot/dist/
+.vite/
+output/
+playwright-report/
+test-results/
