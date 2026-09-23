@@ -20,6 +20,15 @@ interface HostHooks {
   __bounciness?: () => { visibleInstances: number };
   __planet?: () => { visibleInstances: number };
   __simpleSelfContained?: () => { visibleInstances: number };
+  __friction?: () => { visibleInstances: number };
+  __perBodyGravity?: () => { visibleInstances: number };
+  __colosseum?: () => { visibleInstances: number };
+  __continuousCollisionDetection?: () => { visibleInstances: number };
+  __substepping?: () => { visibleInstances: number };
+  __compound?: () => { visibleInstances: number };
+  __contactEvents?: () => { visibleInstances: number };
+  __collisionTracking?: () => { visibleInstances: number };
+  __customVoxelCollidable?: () => { visibleInstances: number };
 }
 
 const DEMOS = [
@@ -27,6 +36,15 @@ const DEMOS = [
   { key: 'bounciness', hook: '__bounciness' },
   { key: 'planet', hook: '__planet' },
   { key: 'simple-self-contained', hook: '__simpleSelfContained' },
+  { key: 'friction', hook: '__friction' },
+  { key: 'per-body-gravity', hook: '__perBodyGravity' },
+  { key: 'colosseum', hook: '__colosseum' },
+  { key: 'continuous-collision-detection', hook: '__continuousCollisionDetection' },
+  { key: 'substepping', hook: '__substepping' },
+  { key: 'compound', hook: '__compound' },
+  { key: 'contact-events', hook: '__contactEvents' },
+  { key: 'collision-tracking', hook: '__collisionTracking' },
+  { key: 'custom-voxel-collidable', hook: '__customVoxelCollidable' },
 ] as const;
 
 const readMenu = (page: import('@playwright/test').Page) =>
@@ -56,9 +74,9 @@ async function goToMenu(page: import('@playwright/test').Page): Promise<void> {
 }
 
 /**
- * Main-menu E2E: the boot scene is the 30-demo card grid. Four cards are live (they connect
- * their C# fixture through the reserved `menu` -> demo key switch), 26 are disabled pending
- * ports. Screenshots are committed for human review (`docs/screenshots/menu*.png`).
+ * Main-menu E2E: the boot scene is the 30-demo card grid. Thirteen cards are live (they
+ * connect their C# fixture through the reserved `menu` -> demo key switch), 17 are disabled
+ * pending ports. Screenshots are committed for human review (`docs/screenshots/menu*.png`).
  */
 test.describe('main menu scene', () => {
   test('renders the 30-demo menu grid', async ({ winAppPage: page }) => {
@@ -71,7 +89,7 @@ test.describe('main menu scene', () => {
     await goToMenu(page);
 
     const menu = await readMenu(page);
-    expect(menu).toEqual({ total: 30, live: 4, placeholders: 26 });
+    expect(menu).toEqual({ total: 30, live: 13, placeholders: 17 });
 
     // Every demo slot has a card; the four ported ones are enabled, the rest are disabled.
     for (const demo of DEMOS) {
@@ -117,7 +135,7 @@ test.describe('main menu scene', () => {
       // demo simulation + its pinned signal buffer (the `menu` key is unknown by design).
       await clickGuiControl(page, 'btn-scene-menu');
       await waitForMenu(page);
-      expect(await readMenu(page)).toEqual({ total: 30, live: 4, placeholders: 26 });
+      expect(await readMenu(page)).toEqual({ total: 30, live: 13, placeholders: 17 });
       expect(await page.evaluate((hookName) => {
         const hooks = window as unknown as Record<string, unknown>;
         return hooks[hookName] === undefined;

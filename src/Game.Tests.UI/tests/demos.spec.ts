@@ -10,13 +10,44 @@ interface HostWindow {
   __pyramid?: () => { floor: number; boxes: number; projectiles: number; visibleInstances: number };
   __bounciness?: () => { floor: number; balls: number; visibleInstances: number; meanHeight: number };
   __planet?: () => { planet: number; balls: number; visibleInstances: number; meanDistance: number };
+  __friction?: () => { floor: number; boxes: number; visibleInstances: number; meanX: number };
+  __perBodyGravity?: () => { floor: number; spheres: number; capsules: number; boxes: number; visibleInstances: number };
+  __colosseum?: () => { ground: number; boxes: number; projectiles: number; visibleInstances: number };
+  __continuousCollisionDetection?: () => { ground: number; discrete: number; passive: number; continuous: number; spinners: number; visibleInstances: number };
+  __substepping?: () => { ground: number; rope: number; wreckingBall: number; stack: number; chains: number; visibleInstances: number };
+  __compound?: () => { ground: number; plane: number; spheres: number; capsules: number; boxes: number; visibleInstances: number };
+  __contactEvents?: () => { statics: number; bodies: number; particles: number; visibleInstances: number };
+  __collisionTracking?: () => { statics: number; bodies: number; particles: number; visibleInstances: number };
+  __customVoxelCollidable?: () => { ground: number; boxes: number; voxels: number; visibleInstances: number };
 }
 
 const SCENES = [
   { key: 'pyramid', hook: '__pyramid' },
   { key: 'bounciness', hook: '__bounciness' },
   { key: 'planet', hook: '__planet' },
+  { key: 'friction', hook: '__friction' },
+  { key: 'per-body-gravity', hook: '__perBodyGravity' },
+  { key: 'colosseum', hook: '__colosseum' },
+  { key: 'continuous-collision-detection', hook: '__continuousCollisionDetection' },
+  { key: 'substepping', hook: '__substepping' },
+  { key: 'compound', hook: '__compound' },
+  { key: 'contact-events', hook: '__contactEvents' },
+  { key: 'collision-tracking', hook: '__collisionTracking' },
+  { key: 'custom-voxel-collidable', hook: '__customVoxelCollidable' },
 ] as const;
+
+/** Contact demos re-drop their bodies just before the screenshot so particles are visible. */
+const DROP_DEMOS = new Set(['contact-events', 'collision-tracking']);
+
+/** Heavier fixtures get a longer settle window before the human-review screenshot. */
+const LONG_SETTLE = new Set([
+  'planet',
+  'colosseum',
+  'continuous-collision-detection',
+  'substepping',
+  'compound',
+  'custom-voxel-collidable',
+]);
 
 async function visibleInstances(page: import('@playwright/test').Page, hook: string): Promise<number> {
   return page.evaluate((hookName) => {
@@ -68,7 +99,14 @@ test.describe('ported demo scenes', () => {
       await expect.poll(() => visibleInstances(page, scene.hook), { timeout: 60_000 }).toBeGreaterThan(0);
 
       // Let the scene settle before the human-review screenshot (gravity demos need motion).
-      await page.waitForTimeout(scene.key === 'planet' ? 4000 : 2500);
+      await page.waitForTimeout(LONG_SETTLE.has(scene.key) ? 4000 : 2500);
+
+      if (DROP_DEMOS.has(scene.key)) {
+        // Re-drop the listened bodies and catch the fresh contact particles.
+        await clickGuiControl(page, 'btn-drop');
+        await page.waitForTimeout(1200);
+      }
+
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, `${scene.key}.png`), fullPage: false });
 
       // Fixture-specific sanity: floor/planet record present and instances flowing.

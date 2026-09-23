@@ -1,4 +1,5 @@
 using DemoEngine.ECS;
+using DemoEngine.Inputs;
 using DemoEngine.Simulations;
 using Game.BepuDemos.Demos;
 using Xunit;
@@ -90,6 +91,16 @@ public class PortedDemoTests
         Assert.Equal(BouncinessDemo.BallCount, demo.BallEntityCount);
     }
 
+    private static Transform3DState StateById(Transform3DRenderSignal signal, int renderId)
+    {
+        foreach (var state in signal.States)
+        {
+            if (state.Id == renderId) return state;
+        }
+
+        throw new InvalidOperationException($"render id {renderId} not found");
+    }
+
     private static double MeanHeight(Transform3DRenderSignal signal)
     {
         double sum = 0;
@@ -143,6 +154,243 @@ public class PortedDemoTests
         }
     }
 
+    // ---- Friction ---------------------------------------------------------
+
+    [Fact]
+    public void Friction_EmitsFullLine_AndFrictionSlowsBoxes()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new FrictionDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var first = transport.Last!;
+        Assert.Equal(1 + FrictionDemo.BoxCount, first.States.Count);
+        Assert.Equal(FrictionDemo.FloorRenderId, StateById(first, FrictionDemo.FloorRenderId).Id);
+
+        for (var i = 1; i < 150; i++) demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        var lowFrictionX = StateById(signal, FrictionDemo.BoxRenderIdBase).X;
+        var highFrictionX = StateById(signal, FrictionDemo.BoxRenderIdBase + FrictionDemo.BoxCount - 1).X;
+
+        Assert.True(lowFrictionX > highFrictionX + 1d, $"friction sweep did not separate slides: {lowFrictionX} vs {highFrictionX}");
+    }
+
+    [Fact]
+    public void Friction_ResetRebuildsLine()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new FrictionDemo(null, transport);
+
+        for (var i = 0; i < 60; i++) demo.Step(1.0 / 60.0);
+        Assert.True(demo.TryCommand("reset"));
+        demo.Step(1.0 / 60.0);
+
+        var signal = transport.Last!;
+        Assert.Equal(1 + FrictionDemo.BoxCount, signal.States.Count);
+        Assert.InRange(StateById(signal, FrictionDemo.BoxRenderIdBase).X, -80.5d, -79.0d);
+    }
+
+    // ---- Per-body gravity --------------------------------------------------
+
+    [Fact]
+    public void PerBodyGravity_SpheresFallSlowerThanBoxes()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new PerBodyGravityDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(1 + PerBodyGravityDemo.BodyCount, transport.Last!.States.Count);
+
+        for (var i = 1; i < 120; i++) demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+
+        double sphereSum = 0, boxSum = 0;
+        int sphereCount = 0, boxCount = 0;
+        foreach (var state in signal.States)
+        {
+            if (state.Id < PerBodyGravityDemo.BodyRenderIdBase) continue;
+            var kind = PerBodyGravityDemo.ShapeKindOf(state.Id);
+            if (kind == PerBodyGravityDemo.ShapeKindSphere)
+            {
+                sphereSum += state.Y;
+                sphereCount++;
+            }
+            else if (kind == PerBodyGravityDemo.ShapeKindBox)
+            {
+                boxSum += state.Y;
+                boxCount++;
+            }
+        }
+
+        Assert.True(sphereCount > 0 && boxCount > 0);
+        Assert.True(sphereSum / sphereCount > boxSum / boxCount + 1d,
+            $"per-body gravity did not separate shapes: spheres {sphereSum / sphereCount}, boxes {boxSum / boxCount}");
+    }
+
+    // ---- Colosseum ---------------------------------------------------------
+
+    [Fact]
+    public void Colosseum_EmitsRings_AndShootsProjectiles()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new ColosseumDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        Assert.Equal(1 + demo.BoxCount, signal.States.Count);
+        Assert.InRange(demo.BoxCount, 1500, 2200);
+
+        Assert.True(demo.TryCommand("shoot-big"));
+        Assert.Equal(1, demo.ProjectileCount);
+        demo.OnFireBall(new FireBallInput(0, 40, -90, 0, 0, 1));
+        Assert.Equal(2, demo.ProjectileCount);
+
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(3 + demo.BoxCount, transport.Last!.States.Count);
+    }
+
+    // ---- Continuous collision detection ------------------------------------
+
+    [Fact]
+    public void ContinuousCollisionDetection_GridsComeToRest_AndSpinnersRotate()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new ContinuousCollisionDetectionDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(1 + ContinuousCollisionDetectionDemo.BoxCount + ContinuousCollisionDetectionDemo.SpinnerBodyCount,
+            transport.Last!.States.Count);
+        Assert.Equal(8, ContinuousCollisionDetectionDemo.SpinnerBodyCount);
+
+        for (var i = 1; i < 60; i++) demo.Step(1.0 / 60.0);
+        var bladeId = ContinuousCollisionDetectionDemo.SpinnerRenderIdBase + 1;
+        var bladeBefore = StateById(transport.Last!, bladeId);
+
+        for (var i = 60; i < 180; i++) demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        var bladeAfter = StateById(signal, bladeId);
+
+        // The motorized blade keeps rotating.
+        var rotationDelta =
+            Math.Abs(bladeAfter.Qx - bladeBefore.Qx) + Math.Abs(bladeAfter.Qy - bladeBefore.Qy) +
+            Math.Abs(bladeAfter.Qz - bladeBefore.Qz) + Math.Abs(bladeAfter.Qw - bladeBefore.Qw);
+        Assert.True(rotationDelta > 0.05d, $"spinner blade did not rotate: {rotationDelta}");
+
+        // Every falling box settles on the ground (top at y = 0) and stays finite.
+        foreach (var state in signal.States)
+        {
+            if (state.Id < ContinuousCollisionDetectionDemo.BoxRenderIdBase) continue;
+            if (state.Id >= ContinuousCollisionDetectionDemo.BoxRenderIdBase + ContinuousCollisionDetectionDemo.BoxCount) continue;
+            Assert.InRange(state.Y, -3d, 3d);
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- Substepping -------------------------------------------------------
+
+    [Fact]
+    public void Substepping_EmitsFixture_AndSolverVerbsMutateCounts()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new SubsteppingDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(SubsteppingDemo.MaxRecords, transport.Last!.States.Count);
+        Assert.Equal(48, demo.SubstepCount);
+        Assert.Equal(2, demo.VelocityIterationCount);
+
+        Assert.True(demo.TryCommand("substeps-less"));
+        Assert.Equal(36, demo.SubstepCount);
+        Assert.True(demo.TryCommand("iters-more"));
+        Assert.Equal(3, demo.VelocityIterationCount);
+        Assert.False(demo.TryCommand("unknown-verb"));
+    }
+
+    // ---- Compound ----------------------------------------------------------
+
+    [Fact]
+    public void Compound_EmitsEveryChild_WithDistinctRenderIds()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new CompoundDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+
+        Assert.Equal(31, demo.CompoundBodyCount);
+        Assert.Equal(1156, signal.States.Count);
+        Assert.Contains(signal.States, s => s.Id == CompoundDemo.PlaneRenderId);
+        Assert.Contains(signal.States, s => s.Id == CompoundDemo.StaticSphereRenderId);
+        Assert.Contains(signal.States, s => s.Id >= CompoundDemo.SphereChildRenderIdBase && s.Id < CompoundDemo.CapsuleChildRenderIdBase);
+
+        var ids = new HashSet<int>();
+        foreach (var state in signal.States)
+        {
+            Assert.True(ids.Add(state.Id), $"duplicate render id {state.Id}");
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- Contact events / collision tracking --------------------------------
+
+    [Fact]
+    public void ContactEvents_SpawnsParticlesOnNewContacts()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new ContactEventsDemo(null, transport);
+
+        Assert.Equal(2, demo.ListenedBodyCount);
+        Assert.Equal(0, demo.ParticleCount);
+
+        for (var i = 0; i < 180; i++) demo.Step(1.0 / 60.0);
+
+        Assert.True(demo.SpawnedParticleCount > 0, "no contact particles spawned");
+        Assert.Equal(4 + demo.ParticleCount, transport.Last!.States.Count);
+
+        // The drop verb teleports the bodies back up for a fresh burst.
+        Assert.True(demo.TryCommand("drop"));
+        Assert.False(demo.TryCommand("unknown-verb"));
+    }
+
+    [Fact]
+    public void CollisionTracking_TracksPairs_AndSpawnsParticles()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new CollisionTrackingDemo(null, transport);
+
+        Assert.Equal(2, demo.TrackedCount);
+
+        for (var i = 0; i < 180; i++) demo.Step(1.0 / 60.0);
+
+        Assert.True(demo.SpawnedParticleCount > 0, "no tracked-contact particles spawned");
+        Assert.Equal(4 + demo.ParticleCount, transport.Last!.States.Count);
+
+        // The drop verb teleports the bodies back up for a fresh burst.
+        Assert.True(demo.TryCommand("drop"));
+        Assert.False(demo.TryCommand("unknown-verb"));
+    }
+
+    // ---- Custom voxel collidable -------------------------------------------
+
+    [Fact]
+    public void CustomVoxel_EmitsVoxelsPlusFallingBoxes_NoNaN()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new CustomVoxelCollidableDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+
+        Assert.InRange(demo.VoxelCount, 1, CustomVoxelCollidableDemo.MaxVoxels);
+        Assert.Equal(1 + CustomVoxelCollidableDemo.BoxCount + demo.VoxelCount, signal.States.Count);
+
+        for (var i = 1; i < 60; i++) demo.Step(1.0 / 60.0);
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
     // ---- Determinism across the ported set ---------------------------------
 
     [Theory]
@@ -150,6 +398,15 @@ public class PortedDemoTests
     [InlineData("pyramid")]
     [InlineData("bounciness")]
     [InlineData("planet")]
+    [InlineData("friction")]
+    [InlineData("per-body-gravity")]
+    [InlineData("colosseum")]
+    [InlineData("continuous-collision-detection")]
+    [InlineData("substepping")]
+    [InlineData("compound")]
+    [InlineData("contact-events")]
+    [InlineData("collision-tracking")]
+    [InlineData("custom-voxel-collidable")]
     public void PortedSet_DeterministicAcrossRuns(string gameKey)
     {
         var first = new CapturingRenderTransport<Transform3DRenderSignal>();
@@ -183,6 +440,15 @@ public class PortedDemoTests
             "pyramid" => new PyramidDemo(null, transport),
             "bounciness" => new BouncinessDemo(null, transport),
             "planet" => new PlanetDemo(null, transport),
+            "friction" => new FrictionDemo(null, transport),
+            "per-body-gravity" => new PerBodyGravityDemo(null, transport),
+            "colosseum" => new ColosseumDemo(null, transport),
+            "continuous-collision-detection" => new ContinuousCollisionDetectionDemo(null, transport),
+            "substepping" => new SubsteppingDemo(null, transport),
+            "compound" => new CompoundDemo(null, transport),
+            "contact-events" => new ContactEventsDemo(null, transport),
+            "collision-tracking" => new CollisionTrackingDemo(null, transport),
+            "custom-voxel-collidable" => new CustomVoxelCollidableDemo(null, transport),
             _ => throw new ArgumentOutOfRangeException(nameof(gameKey), gameKey, "unknown demo key"),
         };
 }

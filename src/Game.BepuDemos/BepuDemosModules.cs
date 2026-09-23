@@ -18,6 +18,15 @@ public static class BepuDemosModules
         registry.AddModule(PyramidDemo.CreateModule());
         registry.AddModule(BouncinessDemo.CreateModule());
         registry.AddModule(PlanetDemo.CreateModule());
+        registry.AddModule(FrictionDemo.CreateModule());
+        registry.AddModule(PerBodyGravityDemo.CreateModule());
+        registry.AddModule(ColosseumDemo.CreateModule());
+        registry.AddModule(ContinuousCollisionDetectionDemo.CreateModule());
+        registry.AddModule(SubsteppingDemo.CreateModule());
+        registry.AddModule(CompoundDemo.CreateModule());
+        registry.AddModule(ContactEventsDemo.CreateModule());
+        registry.AddModule(CollisionTrackingDemo.CreateModule());
+        registry.AddModule(CustomVoxelCollidableDemo.CreateModule());
         return registry;
     }
 }

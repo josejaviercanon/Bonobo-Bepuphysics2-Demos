@@ -22,6 +22,7 @@ library, the ECS mapping and the host bridge.
 | `src/Game.BepuDemos.Tests.Aot` | TUnit AOT/trim pattern checks |
 | `src/Game.Tests.UI` | Playwright E2E over CDP (WebView2) with screenshots |
 | `docs/compat-review.md` | Per-demo compatibility review (authoritative sim vs client render-only) |
+| `docs/ai-agents/codebase-truth.md` | Verified repo facts for agent sessions (commands, port recipe, API gotchas) |
 | `docs/screenshots/` | Committed E2E screenshots for human review |
 | `Temp/` | Upstream BepuPhysics2 demo sources (not part of the build) |
 
@@ -52,7 +53,7 @@ npm run test:e2e
 ## Demo scenes
 
 The app boots into the **main menu** (`menu`): a 30-card grid of the upstream DemoSet in
-`docs/compat-review.md` order. The four ported demos are live cards; the remaining 26 are
+`docs/compat-review.md` order. The thirteen ported demos are live cards; the remaining 17 are
 disabled "(soon)" placeholders. Every demo scene has a `Menu` back button; switching scenes
 disposes the Babylon scene and releases the C# simulation + its pinned signal buffer.
 
@@ -63,8 +64,17 @@ disposes the Babylon scene and releases the C# simulation + its pinned signal bu
 | `pyramid` | PyramidDemo | 12 box pyramids (upstream 40), click cannonball |
 | `bounciness` | BouncinessDemo | 40×40 material sweep (upstream 100×100), 8 substeps |
 | `planet` | PlanetDemo | inverse-square gravity, 24×8×24 orbiting sheet (upstream 40×20×40) |
+| `friction` | FrictionDemo | 100 boxes, friction sweep 0 → 0.75, colour-banded |
+| `per-body-gravity` | PerBodyGravityDemo | 20×4×20 grid (upstream 20×20×20), per-body gravity by shape |
+| `colosseum` | ColosseumDemo | 3 ring layers (upstream 6), click bullets + `Shoot Big` |
+| `continuous-collision-detection` | ContinuousCollisionDetectionDemo | discrete/passive/continuous grids + hinge/motor spinner pairs |
+| `substepping` | SubsteppingDemo | 10000:1 rope + capstone stack + motorized chains, `Substeps±`/`Iters±` |
+| `compound` | CompoundDemo | compound children as individual records + `BigCompound` 128-child bodies |
+| `contact-events` | ContactEventsDemo | full 8-event handler layer, particles on contact add (`Drop`) |
+| `collision-tracking` | CollisionTrackingDemo | deferred pair analysis, particles on new touching ids (`Drop`) |
+| `custom-voxel-collidable` | CustomVoxelCollidableDemo | 20×15×20 voxel terrain (upstream 40×30×40) + 1600 boxes |
 
-The remaining 26 demos and their porting status live in `docs/compat-review.md`.
+The remaining 17 demos and their porting status live in `docs/compat-review.md`.
 
 ## Compatibility rules
 

@@ -5,6 +5,15 @@ import { createSimpleSelfContainedScene } from './src/scenes/simpleSelfContained
 import { createPyramidScene } from './src/scenes/pyramid/scenePyramid';
 import { createBouncinessScene } from './src/scenes/bounciness/sceneBounciness';
 import { createPlanetScene } from './src/scenes/planet/scenePlanet';
+import { createFrictionScene } from './src/scenes/friction/sceneFriction';
+import { createPerBodyGravityScene } from './src/scenes/perBodyGravity/scenePerBodyGravity';
+import { createColosseumScene } from './src/scenes/colosseum/sceneColosseum';
+import { createContinuousCollisionDetectionScene } from './src/scenes/continuousCollisionDetection/sceneContinuousCollisionDetection';
+import { createSubsteppingScene } from './src/scenes/substepping/sceneSubstepping';
+import { createCompoundScene } from './src/scenes/compound/sceneCompound';
+import { createContactEventsScene } from './src/scenes/contactEvents/sceneContactEvents';
+import { createCollisionTrackingScene } from './src/scenes/collisionTracking/sceneCollisionTracking';
+import { createCustomVoxelCollidableScene } from './src/scenes/customVoxelCollidable/sceneCustomVoxelCollidable';
 
 /**
  * Scene registry: one entry per imported Bepu demo plus the main menu. The game key is the
@@ -37,6 +46,51 @@ const SCENES: Record<string, SceneDefinition> = {
         gameKey: 'planet',
         label: 'Planet',
         create: createPlanetScene,
+    },
+    friction: {
+        gameKey: 'friction',
+        label: 'Friction',
+        create: createFrictionScene,
+    },
+    'per-body-gravity': {
+        gameKey: 'per-body-gravity',
+        label: 'Per-Body Gravity',
+        create: createPerBodyGravityScene,
+    },
+    colosseum: {
+        gameKey: 'colosseum',
+        label: 'Colosseum',
+        create: createColosseumScene,
+    },
+    'continuous-collision-detection': {
+        gameKey: 'continuous-collision-detection',
+        label: 'Continuous Collision',
+        create: createContinuousCollisionDetectionScene,
+    },
+    substepping: {
+        gameKey: 'substepping',
+        label: 'Substepping',
+        create: createSubsteppingScene,
+    },
+    compound: {
+        gameKey: 'compound',
+        label: 'Compound',
+        create: createCompoundScene,
+    },
+    'contact-events': {
+        gameKey: 'contact-events',
+        label: 'Contact Events',
+        create: createContactEventsScene,
+    },
+    'collision-tracking': {
+        gameKey: 'collision-tracking',
+        label: 'Collision Tracking',
+        create: createCollisionTrackingScene,
+    },
+    'custom-voxel-collidable': {
+        gameKey: 'custom-voxel-collidable',
+        label: 'Custom Voxel',
+        create: createCustomVoxelCollidableScene,
     },
 };
 

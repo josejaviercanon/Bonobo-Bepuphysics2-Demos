@@ -65,28 +65,28 @@ documented test-bed reductions.
 | 3 | CharacterDemo | mesh | planned (P3) | uses `Content/newt.obj` (present) |
 | 4 | RagdollTubeDemo | constraints | planned (P2) | capsules + constraints |
 | 5 | PyramidDemo | shapes | **ported** | 12 pyramids (upstream 40, documented reduction) |
-| 6 | ColosseumDemo | shapes | planned (P2) | |
+| 6 | ColosseumDemo | shapes | **ported** | 3 ring layers (upstream 6, documented reduction); fire-ball + `shoot-big` replace the Z/X keys |
 | 7 | NewtDemo | mesh + constraints | planned (P3) | OBJ mesh collidable + weld/volume constraints |
 | 8 | ClothDemo | vertex mesh | planned (P3) | needs vertex-level signal records (design noted) |
 | 9 | DancerDemo | constraints | planned (P2) | capsule ragdolls + servos |
 | 10 | PlumpDancerDemo | constraints | planned (P2) | as Dancer + volume constraints |
-| 11 | ContinuousCollisionDetectionDemo | shapes | planned (P2) | |
+| 11 | ContinuousCollisionDetectionDemo | shapes | **ported** | discrete/passive/continuous grids + hinge/motor spinner pairs; servo oscillation driven from fixed-step time (no mouse aim) |
 | 12 | PlanetDemo | custom gravity | **ported** | 24×8×24 sheet (upstream 40×20×40, documented reduction) |
-| 13 | PerBodyGravityDemo | custom gravity | planned (P2) | |
-| 14 | CompoundDemo | compounds | planned (P2) | child-instance render ids |
+| 13 | PerBodyGravityDemo | custom gravity | **ported** | 20×4×20 grid (upstream 20×20×20, documented reduction); per-body gravity via `CollidableProperty<float>` |
+| 14 | CompoundDemo | compounds | **ported** | every compound child is its own transform record (parent ∘ local pose); deformed plane rebuilt client-side |
 | 15 | RopeStabilityDemo | constraints | planned (P2) | |
-| 16 | SubsteppingDemo | solver | planned (P2) | |
+| 16 | SubsteppingDemo | solver | **ported** | `substeps±`/`iters±` verbs replace the Z/X/C/V keys; rope helpers ported into `RopeHelpers` |
 | 17 | ChainFountainDemo | constraints | planned (P2) | |
 | 18 | RopeTwistDemo | constraints | planned (P2) | |
-| 19 | FrictionDemo | materials | planned (P2) | same material-property pattern as Bounciness |
+| 19 | FrictionDemo | materials | **ported** | material-property pattern shared with Bounciness; boxes tinted per friction band |
 | 20 | BouncinessDemo | materials | **ported** | 40×40 grid (upstream 100×100, documented reduction) |
 | 21 | RayCastingDemo | debug visuals | planned (P2) | needs line/ray records |
 | 22 | SweepDemo | debug visuals | planned (P2) | needs line records |
-| 23 | ContactEventsDemo | contact events | planned (P2) | contact accumulation buffers |
-| 24 | CollisionTrackingDemo | contact tracking | planned (P2) | |
+| 23 | ContactEventsDemo | contact events | **ported** | full 8-event `IContactEventHandler` layer; particles are a fixed preallocated array with a `drop` verb |
+| 24 | CollisionTrackingDemo | contact tracking | **ported** | deferred `CollisionTracker` analysis (current/previous pair state); `drop` verb |
 | 25 | CollisionQueryDemo | debug visuals | planned (P2) | |
 | 26 | SolverContactEnumerationDemo | debug visuals | planned (P2) | |
-| 27 | CustomVoxelCollidableDemo | custom shape | planned (P3) | voxel thin-instance render |
+| 27 | CustomVoxelCollidableDemo | custom shape | **ported** | 20×15×20 voxels (upstream 40×30×40) + 1600 boxes (upstream 4096); 8 collision + 8 sweep task registrations; voxel thin-instance render |
 | 28 | BlockChainDemo | constraints | planned (P2) | |
 | 29 | SponsorDemo | mesh + textures | planned (P3) | Sponsor PNGs present in `Temp/Demos/Content/Sponsors` |
 | 30 | SimpleSelfContainedDemo | shapes | **ported** | upstream fixture + ECS orbit markers |
@@ -97,8 +97,10 @@ Ported demos are covered by unit tests (`Game.BepuDemos.Tests`), AOT pattern tes
 
 ## 5. Known deviations / follow-ups
 
-1. **Grid reductions** (Pyramid, Bounciness, Planet) keep the desktop host interactive; the
-   upstream constants are documented at each demo's `CreateModule` doc comment.
+1. **Grid reductions** (Pyramid, Bounciness, Planet, Colosseum, PerBodyGravity, CustomVoxel)
+   keep the desktop host interactive; the upstream constants are documented at each demo's
+   `CreateModule` doc comment. Contact-particle counts are capped (256) and rendered as
+   transform records — upstream rendered them directly through the demo renderer.
 2. **No audio**: the engine's host-scope "audio" event ring is not mirrored (not needed for a
    physics test bed); the scene-loaded packet is still produced so a future audio bridge can
    consume it.
@@ -108,6 +110,8 @@ Ported demos are covered by unit tests (`Game.BepuDemos.Tests`), AOT pattern tes
    `dotnet run --project src/Game.BepuDemos.Tests.Aot` (or execute the built exe).
 4. **Generator parity**: the engine enforces signal/input layouts with Roslyn generators; this
    repo uses hand-written mirrors + unit tests. Adding a demo-specific record struct requires a
-   matching hand-written TS decoder (no generator writes `signalLayout.ts` here).
+   matching hand-written TS decoder (no generator writes `signalLayout.ts` here). Every P2a demo
+   reuses the `Transform3DState` ABI: compound children are parent ∘ local records, contact
+   particles are short-lived records, and the compound deformed plane is presentation-only.
 5. **`Game.Engine` is never modified**: this repo consumes nothing from it at build time
    (`AGENTS.md` rule); the mirror is reviewed manually when the engine ABI changes.
