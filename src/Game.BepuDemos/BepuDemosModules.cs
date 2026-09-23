@@ -27,6 +27,13 @@ public static class BepuDemosModules
         registry.AddModule(ContactEventsDemo.CreateModule());
         registry.AddModule(CollisionTrackingDemo.CreateModule());
         registry.AddModule(CustomVoxelCollidableDemo.CreateModule());
+        registry.AddModule(RopeStabilityDemo.CreateModule());
+        registry.AddModule(RopeTwistDemo.CreateModule());
+        registry.AddModule(ChainFountainDemo.CreateModule());
+        registry.AddModule(BlockChainDemo.CreateModule());
+        registry.AddModule(RagdollTubeDemo.CreateModule());
+        registry.AddModule(DancerDemo.CreateModule());
+        registry.AddModule(PlumpDancerDemo.CreateModule());
         return registry;
     }
 }

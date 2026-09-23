@@ -53,7 +53,7 @@ npm run test:e2e
 ## Demo scenes
 
 The app boots into the **main menu** (`menu`): a 30-card grid of the upstream DemoSet in
-`docs/compat-review.md` order. The thirteen ported demos are live cards; the remaining 17 are
+`docs/compat-review.md` order. The twenty ported demos are live cards; the remaining 10 are
 disabled "(soon)" placeholders. Every demo scene has a `Menu` back button; switching scenes
 disposes the Babylon scene and releases the C# simulation + its pinned signal buffer.
 
@@ -73,8 +73,15 @@ disposes the Babylon scene and releases the C# simulation + its pinned signal bu
 | `contact-events` | ContactEventsDemo | full 8-event handler layer, particles on contact add (`Drop`) |
 | `collision-tracking` | CollisionTrackingDemo | deferred pair analysis, particles on new touching ids (`Drop`) |
 | `custom-voxel-collidable` | CustomVoxelCollidableDemo | 20×15×20 voxel terrain (upstream 40×30×40) + 1600 boxes |
+| `rope-stability` | RopeStabilityDemo | 7 rope configs + skip-constraint rope, static wrap post |
+| `rope-twist` | RopeTwistDemo | 2×65-link ropes (upstream 4×131) on a spinning 10000-mass ball, 30 substeps (upstream 60) |
+| `chain-fountain` | ChainFountainDemo | 2048 capsule beads (upstream 4096) launching out of the container |
+| `block-chain` | BlockChainDemo | 20×20 ball-socket chains, `ICO` verb = upstream Z key (coins) |
+| `ragdoll-tube` | RagdollTubeDemo | 4×4×11 ragdolls (upstream 4×4×44) in a 12-panel spinning tube (upstream 20) |
+| `dancer` | DancerDemo | 64 dancers 8×8 (upstream 256), cloth dresses LOD-clamped, sequential solves |
+| `plump-dancer` | PlumpDancerDemo | 16 dancers 4×4 (upstream 64), weld/voxel fat suits LOD-clamped |
 
-The remaining 17 demos and their porting status live in `docs/compat-review.md`.
+The remaining 10 demos and their porting status live in `docs/compat-review.md`.
 
 ## Compatibility rules
 

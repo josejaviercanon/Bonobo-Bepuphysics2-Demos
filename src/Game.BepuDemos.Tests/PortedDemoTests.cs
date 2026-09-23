@@ -391,6 +391,170 @@ public class PortedDemoTests
         }
     }
 
+    // ---- P2b constraints: ropes / chains ------------------------------------
+
+    [Fact]
+    public void BlockChain_EmitsChains_AndIcoSpawnsCoins()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new BlockChainDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        Assert.Equal(1 + BlockChainDemo.ForkCount * BlockChainDemo.BlocksPerChain, signal.States.Count);
+        Assert.Equal(BlockChainDemo.ForkCount * BlockChainDemo.BlocksPerChain, demo.BlockCount);
+
+        Assert.True(demo.TryCommand("ico"));
+        Assert.Equal(BlockChainDemo.CoinCount, demo.CoinCountSpawned);
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(
+            1 + BlockChainDemo.ForkCount * BlockChainDemo.BlocksPerChain + BlockChainDemo.CoinCount,
+            transport.Last!.States.Count);
+
+        // The second ICO replaces the first batch (fixed-capacity signal).
+        Assert.True(demo.TryCommand("ico"));
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(
+            1 + BlockChainDemo.ForkCount * BlockChainDemo.BlocksPerChain + BlockChainDemo.CoinCount,
+            transport.Last!.States.Count);
+        Assert.False(demo.TryCommand("unknown-verb"));
+
+        Assert.True(demo.TryCommand("reset"));
+        Assert.Equal(0, demo.CoinCountSpawned);
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(1 + BlockChainDemo.ForkCount * BlockChainDemo.BlocksPerChain, transport.Last!.States.Count);
+    }
+
+    [Fact]
+    public void RopeStability_EmitsAllConfigs_NoNaN()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new RopeStabilityDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(RopeStabilityDemo.MaxRecords, transport.Last!.States.Count);
+        Assert.Equal(RopeStabilityDemo.MaxRecords, demo.RecordCount);
+
+        for (var i = 1; i < 120; i++) demo.Step(1.0 / 60.0);
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+            Assert.False(double.IsNaN(state.Qx) || double.IsNaN(state.Qy) || double.IsNaN(state.Qz) || double.IsNaN(state.Qw));
+        }
+    }
+
+    [Fact]
+    public void RopeTwist_EmitsTwoRopesPlusBall_NoNaN()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new RopeTwistDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(RopeTwistDemo.MaxRecords, transport.Last!.States.Count);
+
+        for (var i = 1; i < 60; i++) demo.Step(1.0 / 60.0);
+        var ball = StateById(transport.Last!, RopeTwistDemo.WreckingBallRenderId);
+        Assert.False(double.IsNaN(ball.X) || double.IsNaN(ball.Y) || double.IsNaN(ball.Z));
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    [Fact]
+    public void ChainFountain_EmitsCoil_AndBeadsMove()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new ChainFountainDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        Assert.Equal(ChainFountainDemo.MaxRecords, transport.Last!.States.Count);
+
+        var firstBead = StateById(transport.Last!, ChainFountainDemo.BeadRenderIdBase + ChainFountainDemo.BeadCount - 1);
+        for (var i = 1; i < 60; i++) demo.Step(1.0 / 60.0);
+        var laterBead = StateById(transport.Last!, ChainFountainDemo.BeadRenderIdBase + ChainFountainDemo.BeadCount - 1);
+
+        Assert.True(
+            Math.Abs(laterBead.X - firstBead.X) > 0.05d || Math.Abs(laterBead.Z - firstBead.Z) > 0.05d,
+            "chain tip did not move");
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    [Fact]
+    public void RagdollTube_EmitsTubeAndEveryRagdoll_WithFinitePoses()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new RagdollTubeDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        Assert.Equal(RagdollTubeDemo.MaxRecords, signal.States.Count);
+        var ragdollRecords = 0;
+        foreach (var state in signal.States)
+        {
+            if (state.Id >= RagdollTubeDemo.RagdollRenderIdBase) ragdollRecords++;
+        }
+
+        Assert.Equal(RagdollTubeDemo.RagdollCount * RagdollTubeDemo.RagdollRenderIdStride, ragdollRecords);
+        Assert.True(demo.ConstraintCount > 0);
+
+        for (var i = 1; i < 30; i++) demo.Step(1.0 / 60.0);
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- P2b constraints: dancers -------------------------------------------
+
+    [Fact]
+    public void Dancer_EmitsMainAndBackgroundDancers_WithDresses()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new DancerDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        Assert.Equal(DancerDemo.DancerCount, demo.DancerCountActual);
+        Assert.True(demo.DressNodeCount > 0, "no dress nodes created");
+        Assert.Equal(demo.RecordCount, signal.States.Count);
+
+        var hips = StateById(signal, DancerDemo.MainDancerRenderIdBase + 8);
+        for (var i = 1; i < 30; i++) demo.Step(1.0 / 60.0);
+        var laterHips = StateById(transport.Last!, DancerDemo.MainDancerRenderIdBase + 8);
+        Assert.True(
+            Math.Abs(laterHips.Z - hips.Z) > 1e-3d || Math.Abs(laterHips.Y - hips.Y) > 1e-3d,
+            "the main dancer did not move");
+
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    [Fact]
+    public void PlumpDancer_EmitsMainAndBackgroundDancers_WithSuitNodes()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new PlumpDancerDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        Assert.Equal(PlumpDancerDemo.DancerCount, demo.DancerCountActual);
+        Assert.True(demo.SuitNodeCount > 0, "no fat-suit nodes created");
+        Assert.Equal(demo.RecordCount, signal.States.Count);
+        Assert.True(demo.ConstraintCount > 0);
+
+        for (var i = 1; i < 30; i++) demo.Step(1.0 / 60.0);
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
     // ---- Determinism across the ported set ---------------------------------
 
     [Theory]
@@ -407,6 +571,13 @@ public class PortedDemoTests
     [InlineData("contact-events")]
     [InlineData("collision-tracking")]
     [InlineData("custom-voxel-collidable")]
+    [InlineData("rope-stability")]
+    [InlineData("rope-twist")]
+    [InlineData("chain-fountain")]
+    [InlineData("block-chain")]
+    [InlineData("ragdoll-tube")]
+    [InlineData("dancer")]
+    [InlineData("plump-dancer")]
     public void PortedSet_DeterministicAcrossRuns(string gameKey)
     {
         var first = new CapturingRenderTransport<Transform3DRenderSignal>();
@@ -449,6 +620,13 @@ public class PortedDemoTests
             "contact-events" => new ContactEventsDemo(null, transport),
             "collision-tracking" => new CollisionTrackingDemo(null, transport),
             "custom-voxel-collidable" => new CustomVoxelCollidableDemo(null, transport),
+            "rope-stability" => new RopeStabilityDemo(null, transport),
+            "rope-twist" => new RopeTwistDemo(null, transport),
+            "chain-fountain" => new ChainFountainDemo(null, transport),
+            "block-chain" => new BlockChainDemo(null, transport),
+            "ragdoll-tube" => new RagdollTubeDemo(null, transport),
+            "dancer" => new DancerDemo(null, transport),
+            "plump-dancer" => new PlumpDancerDemo(null, transport),
             _ => throw new ArgumentOutOfRangeException(nameof(gameKey), gameKey, "unknown demo key"),
         };
 }

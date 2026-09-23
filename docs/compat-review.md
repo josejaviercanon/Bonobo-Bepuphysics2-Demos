@@ -63,21 +63,21 @@ documented test-bed reductions.
 | 1 | CarDemo | mesh | planned (P3) | body/wheels are shapes; no external asset needed |
 | 2 | TankDemo | mesh | planned (P3) | procedural body; no external asset needed |
 | 3 | CharacterDemo | mesh | planned (P3) | uses `Content/newt.obj` (present) |
-| 4 | RagdollTubeDemo | constraints | planned (P2) | capsules + constraints |
+| 4 | RagdollTubeDemo | constraints | **ported** | 4×4×11 ragdolls (upstream 4×4×44) + 12-panel tube (upstream 20), `SubgroupFilteredCallbacks` |
 | 5 | PyramidDemo | shapes | **ported** | 12 pyramids (upstream 40, documented reduction) |
 | 6 | ColosseumDemo | shapes | **ported** | 3 ring layers (upstream 6, documented reduction); fire-ball + `shoot-big` replace the Z/X keys |
 | 7 | NewtDemo | mesh + constraints | planned (P3) | OBJ mesh collidable + weld/volume constraints |
 | 8 | ClothDemo | vertex mesh | planned (P3) | needs vertex-level signal records (design noted) |
-| 9 | DancerDemo | constraints | planned (P2) | capsule ragdolls + servos |
-| 10 | PlumpDancerDemo | constraints | planned (P2) | as Dancer + volume constraints |
+| 9 | DancerDemo | constraints | **ported** | 8×8 = 64 dancers (upstream 16×16), cloth dress LOD clamped to [1, 1.5] (upstream 29×29 at LOD 0), per-dancer sims step sequentially (no `ParallelLooper`) |
+| 10 | PlumpDancerDemo | constraints | **ported** | 4×4 = 16 dancers (upstream 8×8), weld-connected voxel fat suit LOD clamped to [1, 1.4] (upstream 23³), sequential solves |
 | 11 | ContinuousCollisionDetectionDemo | shapes | **ported** | discrete/passive/continuous grids + hinge/motor spinner pairs; servo oscillation driven from fixed-step time (no mouse aim) |
 | 12 | PlanetDemo | custom gravity | **ported** | 24×8×24 sheet (upstream 40×20×40, documented reduction) |
 | 13 | PerBodyGravityDemo | custom gravity | **ported** | 20×4×20 grid (upstream 20×20×20, documented reduction); per-body gravity via `CollidableProperty<float>` |
 | 14 | CompoundDemo | compounds | **ported** | every compound child is its own transform record (parent ∘ local pose); deformed plane rebuilt client-side |
-| 15 | RopeStabilityDemo | constraints | planned (P2) | |
+| 15 | RopeStabilityDemo | constraints | **ported** | full upstream fidelity: 7 configs + 100-link skip-constraint rope, static wrap capsule |
 | 16 | SubsteppingDemo | solver | **ported** | `substeps±`/`iters±` verbs replace the Z/X/C/V keys; rope helpers ported into `RopeHelpers` |
-| 17 | ChainFountainDemo | constraints | planned (P2) | |
-| 18 | RopeTwistDemo | constraints | planned (P2) | |
+| 17 | ChainFountainDemo | constraints | **ported** | 2048 beads (upstream 4096) |
+| 18 | RopeTwistDemo | constraints | **ported** | 2×65-link ropes (upstream 4×131) and 30 substeps (upstream 60) |
 | 19 | FrictionDemo | materials | **ported** | material-property pattern shared with Bounciness; boxes tinted per friction band |
 | 20 | BouncinessDemo | materials | **ported** | 40×40 grid (upstream 100×100, documented reduction) |
 | 21 | RayCastingDemo | debug visuals | planned (P2) | needs line/ray records |
@@ -87,7 +87,7 @@ documented test-bed reductions.
 | 25 | CollisionQueryDemo | debug visuals | planned (P2) | |
 | 26 | SolverContactEnumerationDemo | debug visuals | planned (P2) | |
 | 27 | CustomVoxelCollidableDemo | custom shape | **ported** | 20×15×20 voxels (upstream 40×30×40) + 1600 boxes (upstream 4096); 8 collision + 8 sweep task registrations; voxel thin-instance render |
-| 28 | BlockChainDemo | constraints | planned (P2) | |
+| 28 | BlockChainDemo | constraints | **ported** | full upstream fidelity; the Z-key ICO is the `ico` verb and replaces the previous coin batch (fixed-capacity signal) |
 | 29 | SponsorDemo | mesh + textures | planned (P3) | Sponsor PNGs present in `Temp/Demos/Content/Sponsors` |
 | 30 | SimpleSelfContainedDemo | shapes | **ported** | upstream fixture + ECS orbit markers |
 
@@ -97,21 +97,30 @@ Ported demos are covered by unit tests (`Game.BepuDemos.Tests`), AOT pattern tes
 
 ## 5. Known deviations / follow-ups
 
-1. **Grid reductions** (Pyramid, Bounciness, Planet, Colosseum, PerBodyGravity, CustomVoxel)
-   keep the desktop host interactive; the upstream constants are documented at each demo's
-   `CreateModule` doc comment. Contact-particle counts are capped (256) and rendered as
-   transform records — upstream rendered them directly through the demo renderer.
-2. **No audio**: the engine's host-scope "audio" event ring is not mirrored (not needed for a
+1. **Grid reductions** (Pyramid, Bounciness, Planet, Colosseum, PerBodyGravity, CustomVoxel,
+   ChainFountain, RagdollTube, Dancer, PlumpDancer, RopeTwist) keep the desktop host
+   interactive; the upstream constants are documented at each demo's class doc comment. Contact
+   -particle counts are capped (256) and rendered as transform records — upstream rendered them
+   directly through the demo renderer.
+2. **Dancer demos step sequentially**: upstream runs the per-dancer cosmetic simulations through
+   a `ParallelLooper`; this port uses a plain `for` loop so every fixture stays bit-deterministic
+   (asserted at 10 dp). Cost of the 64/16 dancers is bounded by the LOD clamps; the desktop host
+   runs these two fixtures below real time (~4-6 FPS), which the E2E suite absorbs with the
+   `LONG_SETTLE` window.
+3. **Capsule rendering contract**: capsule records emit scale 1 and the client bakes one mesh per
+   (radius, length) pair (`createShapeSet(..., 'capsule', ..., { capsuleHeight, capsuleRadius })`);
+   unit box/sphere/cylinder meshes carry their full dimensions in the record scale.
+4. **No audio**: the engine's host-scope "audio" event ring is not mirrored (not needed for a
    physics test bed); the scene-loaded packet is still produced so a future audio bridge can
    consume it.
-3. **`dotnet test` quirk**: on this SDK (10.0.401) `dotnet test` reports "Zero tests ran" for
+5. **`dotnet test` quirk**: on this SDK (10.0.401) `dotnet test` reports "Zero tests ran" for
    both this repo and the engine repo (MTP integration issue). Run tests directly:
    `dotnet run --project src/Game.BepuDemos.Tests` and
    `dotnet run --project src/Game.BepuDemos.Tests.Aot` (or execute the built exe).
-4. **Generator parity**: the engine enforces signal/input layouts with Roslyn generators; this
+6. **Generator parity**: the engine enforces signal/input layouts with Roslyn generators; this
    repo uses hand-written mirrors + unit tests. Adding a demo-specific record struct requires a
    matching hand-written TS decoder (no generator writes `signalLayout.ts` here). Every P2a demo
    reuses the `Transform3DState` ABI: compound children are parent ∘ local records, contact
    particles are short-lived records, and the compound deformed plane is presentation-only.
-5. **`Game.Engine` is never modified**: this repo consumes nothing from it at build time
+7. **`Game.Engine` is never modified**: this repo consumes nothing from it at build time
    (`AGENTS.md` rule); the mirror is reviewed manually when the engine ABI changes.

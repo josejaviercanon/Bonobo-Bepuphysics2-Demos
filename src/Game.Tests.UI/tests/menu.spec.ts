@@ -29,6 +29,13 @@ interface HostHooks {
   __contactEvents?: () => { visibleInstances: number };
   __collisionTracking?: () => { visibleInstances: number };
   __customVoxelCollidable?: () => { visibleInstances: number };
+  __ropeStability?: () => { visibleInstances: number };
+  __ropeTwist?: () => { visibleInstances: number };
+  __chainFountain?: () => { visibleInstances: number };
+  __blockChain?: () => { visibleInstances: number };
+  __ragdollTube?: () => { visibleInstances: number };
+  __dancer?: () => { visibleInstances: number };
+  __plumpDancer?: () => { visibleInstances: number };
 }
 
 const DEMOS = [
@@ -45,6 +52,13 @@ const DEMOS = [
   { key: 'contact-events', hook: '__contactEvents' },
   { key: 'collision-tracking', hook: '__collisionTracking' },
   { key: 'custom-voxel-collidable', hook: '__customVoxelCollidable' },
+  { key: 'rope-stability', hook: '__ropeStability' },
+  { key: 'rope-twist', hook: '__ropeTwist' },
+  { key: 'chain-fountain', hook: '__chainFountain' },
+  { key: 'block-chain', hook: '__blockChain' },
+  { key: 'ragdoll-tube', hook: '__ragdollTube' },
+  { key: 'dancer', hook: '__dancer' },
+  { key: 'plump-dancer', hook: '__plumpDancer' },
 ] as const;
 
 const readMenu = (page: import('@playwright/test').Page) =>
@@ -74,8 +88,8 @@ async function goToMenu(page: import('@playwright/test').Page): Promise<void> {
 }
 
 /**
- * Main-menu E2E: the boot scene is the 30-demo card grid. Thirteen cards are live (they
- * connect their C# fixture through the reserved `menu` -> demo key switch), 17 are disabled
+ * Main-menu E2E: the boot scene is the 30-demo card grid. Twenty cards are live (they
+ * connect their C# fixture through the reserved `menu` -> demo key switch), 10 are disabled
  * pending ports. Screenshots are committed for human review (`docs/screenshots/menu*.png`).
  */
 test.describe('main menu scene', () => {
@@ -89,7 +103,7 @@ test.describe('main menu scene', () => {
     await goToMenu(page);
 
     const menu = await readMenu(page);
-    expect(menu).toEqual({ total: 30, live: 13, placeholders: 17 });
+    expect(menu).toEqual({ total: 30, live: 20, placeholders: 10 });
 
     // Every demo slot has a card; the four ported ones are enabled, the rest are disabled.
     for (const demo of DEMOS) {
@@ -135,7 +149,7 @@ test.describe('main menu scene', () => {
       // demo simulation + its pinned signal buffer (the `menu` key is unknown by design).
       await clickGuiControl(page, 'btn-scene-menu');
       await waitForMenu(page);
-      expect(await readMenu(page)).toEqual({ total: 30, live: 13, placeholders: 17 });
+      expect(await readMenu(page)).toEqual({ total: 30, live: 20, placeholders: 10 });
       expect(await page.evaluate((hookName) => {
         const hooks = window as unknown as Record<string, unknown>;
         return hooks[hookName] === undefined;

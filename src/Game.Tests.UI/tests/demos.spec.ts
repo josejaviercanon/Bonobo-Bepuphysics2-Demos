@@ -19,6 +19,13 @@ interface HostWindow {
   __contactEvents?: () => { statics: number; bodies: number; particles: number; visibleInstances: number };
   __collisionTracking?: () => { statics: number; bodies: number; particles: number; visibleInstances: number };
   __customVoxelCollidable?: () => { ground: number; boxes: number; voxels: number; visibleInstances: number };
+  __ropeStability?: () => { ground: number; ropes: number; balls: number; post: number; visibleInstances: number };
+  __ropeTwist?: () => { ground: number; ropes: number; ball: number; visibleInstances: number };
+  __chainFountain?: () => { ground: number; walls: number; beads: number; visibleInstances: number };
+  __blockChain?: () => { ground: number; blocks: number; coins: number; visibleInstances: number };
+  __ragdollTube?: () => { ground: number; tube: number; bodies: number; visibleInstances: number };
+  __dancer?: () => { dancers: number; bodyInstances: number; dressNodes: number; visibleInstances: number };
+  __plumpDancer?: () => { dancers: number; bodyInstances: number; suitNodes: number; visibleInstances: number };
 }
 
 const SCENES = [
@@ -34,6 +41,13 @@ const SCENES = [
   { key: 'contact-events', hook: '__contactEvents' },
   { key: 'collision-tracking', hook: '__collisionTracking' },
   { key: 'custom-voxel-collidable', hook: '__customVoxelCollidable' },
+  { key: 'rope-stability', hook: '__ropeStability' },
+  { key: 'rope-twist', hook: '__ropeTwist' },
+  { key: 'chain-fountain', hook: '__chainFountain' },
+  { key: 'block-chain', hook: '__blockChain' },
+  { key: 'ragdoll-tube', hook: '__ragdollTube' },
+  { key: 'dancer', hook: '__dancer' },
+  { key: 'plump-dancer', hook: '__plumpDancer' },
 ] as const;
 
 /** Contact demos re-drop their bodies just before the screenshot so particles are visible. */
@@ -47,6 +61,10 @@ const LONG_SETTLE = new Set([
   'substepping',
   'compound',
   'custom-voxel-collidable',
+  'chain-fountain',
+  'ragdoll-tube',
+  'dancer',
+  'plump-dancer',
 ]);
 
 async function visibleInstances(page: import('@playwright/test').Page, hook: string): Promise<number> {

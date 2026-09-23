@@ -14,6 +14,13 @@ import { createCompoundScene } from './src/scenes/compound/sceneCompound';
 import { createContactEventsScene } from './src/scenes/contactEvents/sceneContactEvents';
 import { createCollisionTrackingScene } from './src/scenes/collisionTracking/sceneCollisionTracking';
 import { createCustomVoxelCollidableScene } from './src/scenes/customVoxelCollidable/sceneCustomVoxelCollidable';
+import { createRopeStabilityScene } from './src/scenes/ropeStability/sceneRopeStability';
+import { createRopeTwistScene } from './src/scenes/ropeTwist/sceneRopeTwist';
+import { createChainFountainScene } from './src/scenes/chainFountain/sceneChainFountain';
+import { createBlockChainScene } from './src/scenes/blockChain/sceneBlockChain';
+import { createRagdollTubeScene } from './src/scenes/ragdollTube/sceneRagdollTube';
+import { createDancerScene } from './src/scenes/dancer/sceneDancer';
+import { createPlumpDancerScene } from './src/scenes/plumpDancer/scenePlumpDancer';
 
 /**
  * Scene registry: one entry per imported Bepu demo plus the main menu. The game key is the
@@ -91,6 +98,41 @@ const SCENES: Record<string, SceneDefinition> = {
         gameKey: 'custom-voxel-collidable',
         label: 'Custom Voxel',
         create: createCustomVoxelCollidableScene,
+    },
+    'rope-stability': {
+        gameKey: 'rope-stability',
+        label: 'Rope Stability',
+        create: createRopeStabilityScene,
+    },
+    'rope-twist': {
+        gameKey: 'rope-twist',
+        label: 'Rope Twist',
+        create: createRopeTwistScene,
+    },
+    'chain-fountain': {
+        gameKey: 'chain-fountain',
+        label: 'Chain Fountain',
+        create: createChainFountainScene,
+    },
+    'block-chain': {
+        gameKey: 'block-chain',
+        label: 'Block Chain',
+        create: createBlockChainScene,
+    },
+    'ragdoll-tube': {
+        gameKey: 'ragdoll-tube',
+        label: 'Ragdoll Tube',
+        create: createRagdollTubeScene,
+    },
+    dancer: {
+        gameKey: 'dancer',
+        label: 'Dancer',
+        create: createDancerScene,
+    },
+    'plump-dancer': {
+        gameKey: 'plump-dancer',
+        label: 'Plump Dancer',
+        create: createPlumpDancerScene,
     },
 };
 

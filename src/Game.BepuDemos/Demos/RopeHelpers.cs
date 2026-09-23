@@ -59,7 +59,7 @@ public static class RopeHelpers
         return handles;
     }
 
-    private static BodyHandle CreateWreckingBall(
+    public static BodyHandle CreateWreckingBall(
         Simulation simulation, BodyHandle[] bodyHandles, float ropeBodyRadius, float bodySpacing,
         float wreckingBallRadius, BodyInertia wreckingBallInertia, TypedIndex wreckingBallShapeIndex)
     {

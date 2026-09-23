@@ -35,14 +35,14 @@ npm run test:e2e                                     # Playwright over WebView2 
 
 ## Demos
 
-### Done (13/30)
+### Done (20/30)
 
 - [x] **SimpleSelfContainedDemo** — sphere on static floor + ECS orbit markers, tap-fire. Tests 31/31 · E2E green · `docs/screenshots/simple-self-contained*.png`
 - [x] **PyramidDemo** — 12 box pyramids (upstream 40, documented), click cannonball. · `docs/screenshots/pyramid.png`
 - [x] **BouncinessDemo** — 40×40 material sweep (upstream 100×100), 8 substeps. · `docs/screenshots/bounciness.png`
 - [x] **PlanetDemo** — inverse-square gravity, 24×8×24 orbiting sheet (upstream 40×20×40). · `docs/screenshots/planet.png`
 
-### Pending (17/30)
+### Pending (10/30)
 
 Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat-review table`.
 
@@ -58,15 +58,15 @@ Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat
 - [x] **CollisionTrackingDemo** — contact tracking visualization
 - [x] **CustomVoxelCollidableDemo** — custom voxel shape; voxel thin-instance render (20×15×20, upstream 40×30×40)
 
-#### P2b — constraints (7)
+#### P2b — constraints (7) — done
 
-- [ ] **RopeStabilityDemo** — capsules + distance constraints
-- [ ] **RopeTwistDemo** — twist-stable rope
-- [ ] **ChainFountainDemo** — box chain fountain
-- [ ] **BlockChainDemo** — block chain
-- [ ] **RagdollTubeDemo** — capsule ragdoll in a tube
-- [ ] **DancerDemo** — capsule ragdolls + servos
-- [ ] **PlumpDancerDemo** — dancer + volume constraints
+- [x] **RopeStabilityDemo** — 7 configs + skip-constraint rope (full fidelity) · `docs/screenshots/rope-stability.png`
+- [x] **RopeTwistDemo** — 2×65-link ropes (upstream 4×131), 30 substeps (upstream 60) · `docs/screenshots/rope-twist.png`
+- [x] **ChainFountainDemo** — 2048 capsule beads (upstream 4096) · `docs/screenshots/chain-fountain.png`
+- [x] **BlockChainDemo** — 20×20 chains + `ico` verb (upstream Z key) · `docs/screenshots/block-chain.png`
+- [x] **RagdollTubeDemo** — 4×4×11 ragdolls (upstream 4×4×44), 12-panel tube (upstream 20) · `docs/screenshots/ragdoll-tube.png`
+- [x] **DancerDemo** — 8×8 = 64 dancers (upstream 16×16), cloth dress LOD-clamped, sequential solves · `docs/screenshots/dancer.png`
+- [x] **PlumpDancerDemo** — 4×4 = 16 dancers (upstream 8×8), weld voxel fat suits LOD-clamped · `docs/screenshots/plump-dancer.png`
 
 #### P2c — debug-visual demos (4, need line/ray records + `LinesMesh` client-side)
 
@@ -88,11 +88,12 @@ Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat
 
 ## Cross-cutting follow-ups
 
-- [x] Main menu scene: 30-demo card grid (13 live / 17 disabled placeholders), `Menu` back
+- [x] Main menu scene: 30-demo card grid (20 live / 10 disabled placeholders), `Menu` back
       button on every demo, memory reset on switch (Babylon scene dispose + C# sim/pinned-buffer
       release + host shared-buffer channel cleanup) — `menu.spec.ts` round-trip E2E
 - [ ] Cloth vertex-record design note in `docs/compat-review.md` before the ClothDemo port
-- [x] Per-demo deviations table (grid reductions, input remaps) kept up to date in `docs/compat-review.md` (P2a rows updated)
+- [x] Per-demo deviations table (grid reductions, input remaps, sequential dancer solves) kept up to date in `docs/compat-review.md` (P2a + P2b rows updated)
+- [x] Shared P2b helper ports: `SubgroupFilter`, `RopeFilter`, `RagdollBuilder`, `DemoDancers`, `ClothFilter`, `DeformableFilter` + the dancer-scene TS factory
 - [ ] E2E: one spec per demo (switch scene → assert instances → screenshot), current `demos.spec.ts` loop extended;
       new demos become live cards in `src/BepuDemos.UI/src/scenes/menu/sceneMenu.ts`
 - [ ] Keep engine repo untouched; ABI re-check when the engine ABI changes

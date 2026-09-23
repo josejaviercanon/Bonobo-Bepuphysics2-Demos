@@ -4,16 +4,18 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder';
 import { CreateSphere } from '@babylonjs/core/Meshes/Builders/sphereBuilder';
 import { CreateCapsule } from '@babylonjs/core/Meshes/Builders/capsuleBuilder';
+import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder';
 import '@babylonjs/core/Meshes/thinInstanceMesh';
 import { ThinInstanceSet } from './instanceSets';
 
-export type ShapeKind = 'box' | 'sphere' | 'capsule';
+export type ShapeKind = 'box' | 'sphere' | 'capsule' | 'cylinder';
 
 export interface ShapeSetOptions {
     /** Capsule mesh total height (Bepu `Capsule(radius, length)` renders length + 2·radius). */
     capsuleHeight?: number;
     capsuleRadius?: number;
     sphereSegments?: number;
+    cylinderTessellation?: number;
 }
 
 /**
@@ -34,11 +36,13 @@ export function createShapeSet(
         ? CreateBox(name, { size: 1 }, scene)
         : kind === 'sphere'
             ? CreateSphere(name, { diameter: 1, segments: options.sphereSegments ?? 12 }, scene)
-            : CreateCapsule(name, {
-                height: options.capsuleHeight ?? 1,
-                radius: options.capsuleRadius ?? 0.25,
-                tessellation: 12,
-            }, scene);
+            : kind === 'cylinder'
+                ? CreateCylinder(name, { height: 1, diameter: 1, tessellation: options.cylinderTessellation ?? 16 }, scene)
+                : CreateCapsule(name, {
+                    height: options.capsuleHeight ?? 1,
+                    radius: options.capsuleRadius ?? 0.25,
+                    tessellation: 12,
+                }, scene);
 
     const material = new StandardMaterial(`${name}-mat`, scene);
     material.diffuseColor = color;
