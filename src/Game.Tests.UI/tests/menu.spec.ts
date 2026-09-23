@@ -36,6 +36,10 @@ interface HostHooks {
   __ragdollTube?: () => { visibleInstances: number };
   __dancer?: () => { visibleInstances: number };
   __plumpDancer?: () => { visibleInstances: number };
+  __rayCasting?: () => { visibleInstances: number };
+  __sweep?: () => { visibleInstances: number };
+  __collisionQuery?: () => { visibleInstances: number };
+  __solverContactEnumeration?: () => { visibleInstances: number };
 }
 
 const DEMOS = [
@@ -59,6 +63,10 @@ const DEMOS = [
   { key: 'ragdoll-tube', hook: '__ragdollTube' },
   { key: 'dancer', hook: '__dancer' },
   { key: 'plump-dancer', hook: '__plumpDancer' },
+  { key: 'ray-casting', hook: '__rayCasting' },
+  { key: 'sweep', hook: '__sweep' },
+  { key: 'collision-query', hook: '__collisionQuery' },
+  { key: 'solver-contact-enumeration', hook: '__solverContactEnumeration' },
 ] as const;
 
 const readMenu = (page: import('@playwright/test').Page) =>
@@ -103,7 +111,7 @@ test.describe('main menu scene', () => {
     await goToMenu(page);
 
     const menu = await readMenu(page);
-    expect(menu).toEqual({ total: 30, live: 20, placeholders: 10 });
+    expect(menu).toEqual({ total: 30, live: 24, placeholders: 6 });
 
     // Every demo slot has a card; the four ported ones are enabled, the rest are disabled.
     for (const demo of DEMOS) {
@@ -112,7 +120,7 @@ test.describe('main menu scene', () => {
     }
     expect(await guiControlExists(page, 'btn-menu-slot-1')).toBe(true);
     expect(await guiControlEnabled(page, 'btn-menu-slot-1')).toBe(false);
-    expect(await guiControlEnabled(page, 'btn-menu-slot-26')).toBe(false);
+    expect(await guiControlEnabled(page, 'btn-menu-slot-29')).toBe(false);
 
     // The overlay actually laid out (a zero measure would render nothing).
     const title = await guiControlMeasure(page, 'menu-title');
@@ -149,7 +157,7 @@ test.describe('main menu scene', () => {
       // demo simulation + its pinned signal buffer (the `menu` key is unknown by design).
       await clickGuiControl(page, 'btn-scene-menu');
       await waitForMenu(page);
-      expect(await readMenu(page)).toEqual({ total: 30, live: 20, placeholders: 10 });
+      expect(await readMenu(page)).toEqual({ total: 30, live: 24, placeholders: 6 });
       expect(await page.evaluate((hookName) => {
         const hooks = window as unknown as Record<string, unknown>;
         return hooks[hookName] === undefined;

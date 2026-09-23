@@ -12,8 +12,9 @@ shared-memory signal ABI, and Babylon.js v9 presentation.
 
 | Contract | Mirror location | Value | Pinned by |
 | --- | --- | --- | --- |
-| Signal header | `DemoEngine.ECS.SignalBuffer` | 6 doubles: seq, epoch, count, stride, stepMs, tickMs | `AbiPinTests.SignalHeader_HasEngineShape` |
+| Signal header | `DemoEngine.ECS.SignalBuffer` | 8 doubles: seq, epoch, count, stride, stepMs, tickMs, lineCount, lineStride | `AbiPinTests.SignalHeader_HasEngineShape` |
 | `Transform3DState` stride | `DemoEngine.ECS.SignalBufferLayout` | 12 doubles (id, xyz, quat xyzw, scale xyz, lifecycle) | `AbiPinTests.Transform3DLayout_IsStride12Float64` |
+| `LineState` region | `DemoEngine.ECS.SignalBufferLayout` | stride 12 doubles (id, start xyz, end xyz, rgba, reserved), appended after the transform records; `lineCount = 0` for every pre-P2c demo | `AbiPinTests.LineStateLayout_IsStride12Float64`, `AbiPinTests.LineEncoder_WritesLineRegionAfterTransforms` |
 | Globals clock block | `DemoEngine.ECS.SignalBuffer` | 8 doubles (seq, time, delta, stepCount, paused, alpha, processed, dropped) | `AbiPinTests.GlobalClock_IsEightFloat64Elements` |
 | Input ring | `DemoEngine.Inputs.InputRingLayout` | 8 slots × 100 records | `AbiPinTests.InputRing_IsEightSlotsByHundredRecords` |
 | Packet ids / slots | `DemoEngine.Inputs` | 1 click-move (slots 1..4), 2 fire-ball (1..6), 3 scene-loaded (1) | `AbiPinTests.InputPacketIds_MatchEngineValues`, TS `src/signalLayout.ts` |
@@ -80,12 +81,12 @@ documented test-bed reductions.
 | 18 | RopeTwistDemo | constraints | **ported** | 2×65-link ropes (upstream 4×131) and 30 substeps (upstream 60) |
 | 19 | FrictionDemo | materials | **ported** | material-property pattern shared with Bounciness; boxes tinted per friction band |
 | 20 | BouncinessDemo | materials | **ported** | 40×40 grid (upstream 100×100, documented reduction) |
-| 21 | RayCastingDemo | debug visuals | planned (P2) | needs line/ray records |
-| 22 | SweepDemo | debug visuals | planned (P2) | needs line records |
+| 21 | RayCastingDemo | debug visuals | **ported** | full 16384 rays/source (random/frustum/wall), single unbatched pass; `LineState` ray records (hit green + normal yellow, miss red); zero-radius upstream capsule kept in the sim but rendered with a small baked radius; convex hulls render as unit boxes; batched-vs-unbatched timing overlay dropped |
+| 22 | SweepDemo | debug visuals | **ported** | 16 scene-wide sweeps + 20-pose ghost trails (hit/miss id ranges) + impact tangent lines; unsafe pairwise shape matrix dropped (deviation 8) |
 | 23 | ContactEventsDemo | contact events | **ported** | full 8-event `IContactEventHandler` layer; particles are a fixed preallocated array with a `drop` verb |
 | 24 | CollisionTrackingDemo | contact tracking | **ported** | deferred `CollisionTracker` analysis (current/previous pair state); `drop` verb |
-| 25 | CollisionQueryDemo | debug visuals | planned (P2) | |
-| 26 | SolverContactEnumerationDemo | debug visuals | planned (P2) | |
+| 25 | CollisionQueryDemo | debug visuals | **ported** | 25 queries + 128 falling boxes + deformed plane; managed `CollisionBatcher.Add(TypedIndex, …)` replaces the raw-pointer path; touched/untouched queries route to green/red id ranges |
+| 26 | SolverContactEnumerationDemo | debug visuals | **ported** | full `ISolverContactDataExtractor` port; per-contact cylinders sized by penetration/friction impulse, green (touching) / blue (speculative) id ranges |
 | 27 | CustomVoxelCollidableDemo | custom shape | **ported** | 20×15×20 voxels (upstream 40×30×40) + 1600 boxes (upstream 4096); 8 collision + 8 sweep task registrations; voxel thin-instance render |
 | 28 | BlockChainDemo | constraints | **ported** | full upstream fidelity; the Z-key ICO is the `ico` verb and replaces the previous coin batch (fixed-capacity signal) |
 | 29 | SponsorDemo | mesh + textures | planned (P3) | Sponsor PNGs present in `Temp/Demos/Content/Sponsors` |
@@ -119,8 +120,31 @@ Ported demos are covered by unit tests (`Game.BepuDemos.Tests`), AOT pattern tes
    `dotnet run --project src/Game.BepuDemos.Tests.Aot` (or execute the built exe).
 6. **Generator parity**: the engine enforces signal/input layouts with Roslyn generators; this
    repo uses hand-written mirrors + unit tests. Adding a demo-specific record struct requires a
-   matching hand-written TS decoder (no generator writes `signalLayout.ts` here). Every P2a demo
-   reuses the `Transform3DState` ABI: compound children are parent ∘ local records, contact
-   particles are short-lived records, and the compound deformed plane is presentation-only.
+   matching hand-written TS decoder (no generator writes `signalLayout.ts` here). Every P2a/P2b
+   demo reuses the `Transform3DState` ABI: compound children are parent ∘ local records, contact
+   particles are short-lived records, and the compound deformed plane is presentation-only. The
+   P2c debug-visual demos added the `LineState` region (header 6 → 8 doubles): transient colored
+   line segments appended after the transform records, decoded by `decodeTransform3D.ts` and
+   rendered through one `LinesMesh` per scene (`rendering/lineSets.ts`, per-vertex `Color4`).
+   The engine-side header does not carry the line fields yet — this is the one documented ABI
+   extension in the mirror.
 7. **`Game.Engine` is never modified**: this repo consumes nothing from it at build time
    (`AGENTS.md` rule); the mirror is reviewed manually when the engine ABI changes.
+8. **P2c debug-visual deviations**:
+   - **RayCasting**: upstream compares a batched and an unbatched ray algorithm and prints timings;
+     the Bonobo package exposes no public `SimulationRayBatcher` constructor and the ABI has no
+     text channel, so the port runs one unbatched pass. A zero-radius capsule collidable (upstream
+     `Capsule(0, 0.5)`) is kept in the simulation but rendered with a small baked radius, and
+     convex-hull collidables are drawn as unit boxes (no hull mesh client-side).
+   - **Sweep**: the upstream background pairwise shape-vs-shape matrix uses the raw-pointer
+     `SweepTaskRegistry.Sweep(void*)` API; unsafe code is forbidden in ported demos, so only the
+     managed scene-wide `Simulation.Sweep` part is ported (ghost trails are solid green/red per
+     hit/miss id range instead of the per-step fade).
+   - **CollisionQuery**: the raw-pointer `AddDirectly`/`CacheShapeB`/`GetShapeData` path is
+     replaced by the managed `CollisionBatcher.Add(TypedIndex, TypedIndex, …)` overload (both
+     shapes are registered in `Simulation.Shapes`); a fresh batcher is created per pass because a
+     batcher cannot be reused across flushes once nonconvex shapes (the deformed mesh) were added.
+   - **SolverContactEnumeration**: per-contact render color is replaced by two id ranges (the
+     `Transform3DState` record carries no color); the extractor itself is a 1:1 port.
+   - All four demos drop the upstream text overlays (no text channel in the ABI, matching every
+     other ported demo).

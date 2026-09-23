@@ -34,6 +34,10 @@ public static class BepuDemosModules
         registry.AddModule(RagdollTubeDemo.CreateModule());
         registry.AddModule(DancerDemo.CreateModule());
         registry.AddModule(PlumpDancerDemo.CreateModule());
+        registry.AddModule(RayCastingDemo.CreateModule());
+        registry.AddModule(SweepDemo.CreateModule());
+        registry.AddModule(CollisionQueryDemo.CreateModule());
+        registry.AddModule(SolverContactEnumerationDemo.CreateModule());
         return registry;
     }
 }

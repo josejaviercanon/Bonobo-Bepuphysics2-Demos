@@ -21,6 +21,10 @@ import { createBlockChainScene } from './src/scenes/blockChain/sceneBlockChain';
 import { createRagdollTubeScene } from './src/scenes/ragdollTube/sceneRagdollTube';
 import { createDancerScene } from './src/scenes/dancer/sceneDancer';
 import { createPlumpDancerScene } from './src/scenes/plumpDancer/scenePlumpDancer';
+import { createRayCastingScene } from './src/scenes/rayCasting/sceneRayCasting';
+import { createSweepScene } from './src/scenes/sweep/sceneSweep';
+import { createCollisionQueryScene } from './src/scenes/collisionQuery/sceneCollisionQuery';
+import { createSolverContactEnumerationScene } from './src/scenes/solverContactEnumeration/sceneSolverContactEnumeration';
 
 /**
  * Scene registry: one entry per imported Bepu demo plus the main menu. The game key is the
@@ -133,6 +137,26 @@ const SCENES: Record<string, SceneDefinition> = {
         gameKey: 'plump-dancer',
         label: 'Plump Dancer',
         create: createPlumpDancerScene,
+    },
+    'ray-casting': {
+        gameKey: 'ray-casting',
+        label: 'Ray Casting',
+        create: createRayCastingScene,
+    },
+    sweep: {
+        gameKey: 'sweep',
+        label: 'Sweep',
+        create: createSweepScene,
+    },
+    'collision-query': {
+        gameKey: 'collision-query',
+        label: 'Collision Query',
+        create: createCollisionQueryScene,
+    },
+    'solver-contact-enumeration': {
+        gameKey: 'solver-contact-enumeration',
+        label: 'Solver Contact Enum',
+        create: createSolverContactEnumerationScene,
     },
 };
 

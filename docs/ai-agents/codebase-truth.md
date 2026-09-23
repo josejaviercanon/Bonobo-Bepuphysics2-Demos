@@ -36,7 +36,7 @@ npm run test:e2e                         # root shortcut -> Playwright over WebV
 5. Unit tests: behavior test + `[InlineData("<key>")]` in
    `PortedDemoTests.PortedSet_DeterministicAcrossRuns` + factory switch.
 6. E2E: `SCENES` + `HostWindow` hook in `src/Game.Tests.UI/tests/demos.spec.ts`; menu counts in
-   `menu.spec.ts` (currently `{ total: 30, live: 20, placeholders: 10 }`).
+   `menu.spec.ts` (currently `{ total: 30, live: 24, placeholders: 6 }`).
 7. Docs: `docs/compat-review.md` status row, `README.md` scene table, `plan.md` counts.
 
 Shared C# helpers: `DemoPoseSet` (render-id → body/static registry, pose sync, batched emit),
@@ -46,7 +46,9 @@ Shared C# helpers: `DemoPoseSet` (render-id → body/static registry, pose sync,
 cosmetic simulations, motion-history replay), `ClothFilter`/`DeformableFilter` (self-collision
 filters for the dancer dress/suit), `DemoMeshHelper.CreateDeformedPlane`.
 Shared TS helpers: `rendering/ground.ts`, `rendering/shapeSets.ts` (box/sphere/capsule/cylinder),
-`rendering/instanceSets.ts`, `rendering/thinInstances.ts`, `gui/commandButtons.ts`,
+`rendering/instanceSets.ts`, `rendering/thinInstances.ts`, `rendering/lineSets.ts` (fixed-capacity
+per-vertex-color `LinesMesh`), `rendering/deformedPlane.ts` (client duplicate of
+`DemoMeshHelper.CreateDeformedPlane`), `gui/commandButtons.ts`,
 `scenes/dancers/dancerSceneShared.ts` (dancer/plump-dancer scene factory).
 
 ## Bepu / C# API facts (learned the hard way)
@@ -82,11 +84,41 @@ Shared TS helpers: `rendering/ground.ts`, `rendering/shapeSets.ts` (box/sphere/c
 - Dancer demos use one `DemoPoseSet` per simulation (main + one per background dancer) sharing the
   same ECS `World`; render ids use a per-dancer stride (512 dress / 4096 suit) because the dress
   node count varies with LOD.
+- P2c query API facts:
+  - `Simulation.RayCast<THitHandler>(Vector3 origin, Vector3 direction, float maximumT,
+    BufferPool pool, ref THitHandler handler, int id)` is the only overload; `RayData` lives in
+    `Bonobo.Bepuphysics2.Trees` and carries `Origin`/`Direction`/`Id` only (no `MaximumT`).
+    `IRayHitHandler.OnRayHit(in RayData, ref float maximumT, …)` receives the running max-T by
+    ref, so the handler must assign `maximumT = t` to clamp the traversal.
+  - `SimulationRayBatcher<T>` has **no public constructor** in this package (the batched-vs-
+    unbatched comparison cannot be ported); use one unbatched pass.
+  - `Simulation.Sweep<TShape, TSweepHitHandler>(TShape shape, in RigidPose pose, in BodyVelocity
+    velocity, float maximumT, BufferPool pool, ref TSweepHitHandler handler)` is the managed path;
+    `SweepTaskRegistry.Sweep(void*)` (the pairwise matrix) is unsafe-only.
+  - `CollisionBatcher<T>` has managed `Add(TypedIndex, TypedIndex, offsetB, orientA, orientB,
+    margin, in PairContinuation)` and `Add<TShapeA,TShapeB>(…)` overloads; `AddDirectly`/
+    `CacheShapeB`/`GetShapeData` are unsafe-only. Both shapes must be registered in
+    `Simulation.Shapes`. A batcher **cannot be reused across flushes** once nonconvex shapes
+    (meshes) were added — create a fresh one per pass (upstream does this per frame).
+  - `ISolverContactDataExtractor` lives in `Bonobo.Bepuphysics2.Constraints.Contact`;
+    `NarrowPhase.TryExtractSolverContactData(ConstraintHandle, ref TExtractor)` and the sensor's
+    `BodyReference.Constraints[i].ConnectingConstraintHandle` (`QuickList<BodyConstraintReference>`)
+    drive the enumeration. `NonconvexContactManifold` is in `.CollisionDetection`.
+  - `QuickList<T>` exposes `Count` and `Span` as **fields** (`Span` is a `Buffer<T>`); `Buffer<T>`
+    converts implicitly to `Span<T>`.
+  - `BodyDescription.CreateConvexDynamic(position, mass, Shapes, shape)` builds the sensor body.
 
 ## Signal / E2E contract
 
-- One ABI for every demo: `Transform3DState` (stride 12, float64). Compound children are
-  parent ∘ local records; particles are short-lived records; no new record types were needed.
+- One ABI for every demo: header 8 doubles (`seq, epoch, transformCount, stride, stepMs, tickMs,
+  lineCount, lineStride`) + `Transform3DState` records (stride 12, float64) + optional
+  `LineState` records (stride 12: id, start xyz, end xyz, rgba, reserved) appended after the
+  transforms. Compound children are parent ∘ local records; particles are short-lived records.
+  Only the P2c debug-visual demos emit lines; every other demo writes `lineCount = 0`.
+- Line records are transient (rewritten every step, no lifecycle). The client renders them
+  through one fixed-capacity `LinesMesh` per scene (`rendering/lineSets.ts`): Babylon forbids
+  changing the point count of an updatable line system, so unused slots are hidden with alpha 0,
+  and per-vertex `Color4` removes any palette bucketing (one draw call per scene).
 - Scene hook contract: every scene sets `window.__<key>()` returning at least
   `{ visibleInstances }`; E2E polls it before screenshotting to `docs/screenshots/<game-key>.png`.
 - Contact demos click `btn-drop` before their screenshot so particles are visible.

@@ -15,11 +15,30 @@ public record struct Transform3DState(
     double Sx, double Sy, double Sz,
     double Lifecycle);
 
+/// <summary>
+///     Plain-data snapshot of one colored line segment (debug visuals: rays, sweep impacts),
+///     serialized into the shared-memory float64 signal buffer after the transform region.
+///     Layout: id + start (x, y, z) + end (x, y, z) + rgba + reserved = 12 elements.
+///     <c>reserved</c> keeps the stride identical to <see cref="Transform3DState"/> so both
+///     regions are walkable with one stride constant. Lines are transient per tick — they
+///     carry no lifecycle flag.
+/// </summary>
+public record struct LineState(
+    int Id,
+    double Ax, double Ay, double Az,
+    double Bx, double By, double Bz,
+    double R, double G, double B, double A,
+    double Reserved = 0d);
+
 public sealed record Transform3DRenderSignal(
     long Seq,
     int EntityCount,
     double TickMs,
-    IReadOnlyList<Transform3DState> States);
+    IReadOnlyList<Transform3DState> States,
+    IReadOnlyList<LineState>? Lines = null)
+{
+    public int LineCount => Lines?.Count ?? 0;
+}
 
 /// <summary>
 ///     Lifecycle flags carried in the 12th scalar of <see cref="Transform3DState"/> so the
@@ -42,12 +61,15 @@ public static class EntityLifecycle3
 public static class SignalBufferEncoders
 {
     public static int ElementLength(Transform3DRenderSignal s) =>
-        SignalBuffer.HeaderLength + s.States.Count * SignalBufferLayout.Transform3DStride;
+        SignalBuffer.HeaderLength
+        + s.States.Count * SignalBufferLayout.Transform3DStride
+        + s.LineCount * SignalBufferLayout.LineStateStride;
 
     public static void Encode(Transform3DRenderSignal s, Span<double> f)
     {
         SignalBuffer.WriteHeader(f, s.Seq, 0, s.States.Count,
-            SignalBufferLayout.Transform3DStride, (1d / 60d) * 1000d, s.TickMs);
+            SignalBufferLayout.Transform3DStride, (1d / 60d) * 1000d, s.TickMs,
+            s.LineCount, SignalBufferLayout.LineStateStride);
 
         for (var i = 0; i < s.States.Count; i++)
         {
@@ -66,6 +88,29 @@ public static class SignalBufferEncoders
             dst[9] = st.Sy;
             dst[10] = st.Sz;
             dst[11] = st.Lifecycle;
+        }
+
+        var lines = s.Lines;
+        if (lines is null) return;
+
+        var lineBase = SignalBuffer.HeaderLength + s.States.Count * SignalBufferLayout.Transform3DStride;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            var dst = f.Slice(lineBase + i * SignalBufferLayout.LineStateStride,
+                SignalBufferLayout.LineStateStride);
+            dst[0] = line.Id;
+            dst[1] = line.Ax;
+            dst[2] = line.Ay;
+            dst[3] = line.Az;
+            dst[4] = line.Bx;
+            dst[5] = line.By;
+            dst[6] = line.Bz;
+            dst[7] = line.R;
+            dst[8] = line.G;
+            dst[9] = line.B;
+            dst[10] = line.A;
+            dst[11] = line.Reserved;
         }
     }
 }

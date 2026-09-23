@@ -555,6 +555,103 @@ public class PortedDemoTests
         }
     }
 
+    // ---- Ray casting (P2c) -------------------------------------------------
+
+    [Fact]
+    public void RayCasting_EmitsLineSegments_AndHitsInsideCloud()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new RayCastingDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+
+        Assert.Equal(1 + RayCastingDemo.GridCount, signal.States.Count);
+        Assert.True(signal.LineCount >= RayCastingDemo.RandomRayCount,
+            $"expected at least one segment per ray, got {signal.LineCount}");
+        Assert.True(signal.LineCount <= RayCastingDemo.MaxLineCount);
+
+        // The random source starts inside the collidable cloud, so some rays must hit: hit
+        // segments shade green / normals are yellow, misses stay dark red (G == 0).
+        Assert.Contains(signal.Lines!, line => line.G > 0d);
+    }
+
+    [Fact]
+    public void RayCasting_SourceCommands_SwitchRayCounts()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new RayCastingDemo(null, transport);
+
+        Assert.True(demo.TryCommand("source-frustum"));
+        demo.Step(1.0 / 60.0);
+        var frustum = transport.Last!;
+        Assert.InRange(frustum.LineCount, RayCastingDemo.FrustumRayCount, RayCastingDemo.MaxLineCount);
+
+        Assert.True(demo.TryCommand("reset-rotation"));
+        Assert.False(demo.TryCommand("not-a-verb"));
+    }
+
+    // ---- Sweep (P2c) -------------------------------------------------------
+
+    [Fact]
+    public void Sweep_EmitsGridGhostTrailsAndImpactLines()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new SweepDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+
+        Assert.Equal(1 + SweepDemo.GridCount + SweepDemo.GhostCount, signal.States.Count);
+        var ghosts = signal.States.Count(s => s.Id >= SweepDemo.SweepHitGhostRenderIdBase && s.Id < SweepDemo.GridCapsuleRenderIdBase);
+        Assert.Equal(SweepDemo.GhostCount, ghosts);
+        Assert.True(signal.LineCount <= SweepDemo.MaxLineCount);
+    }
+
+    // ---- Collision query (P2c) ---------------------------------------------
+
+    [Fact]
+    public void CollisionQuery_RoutesEveryQueryToTouchedOrUntouched()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new CollisionQueryDemo(null, transport);
+
+        // The falling boxes start 45+ units up and pass through the query grid around step 180.
+        for (var i = 0; i < 200; i++) demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+
+        Assert.Equal(CollisionQueryDemo.MaxTransformCount, signal.States.Count);
+        var touched = signal.States.Count(s => s.Id >= CollisionQueryDemo.TouchedQueryRenderIdBase && s.Id < CollisionQueryDemo.UntouchedQueryRenderIdBase);
+        var untouched = signal.States.Count(s => s.Id >= CollisionQueryDemo.UntouchedQueryRenderIdBase);
+        Assert.Equal(CollisionQueryDemo.QueryCount, touched + untouched);
+
+        // Boxes falling through the query grid must register positive-depth contacts.
+        Assert.True(touched > 0, "no query reported a contact while boxes fell through the grid");
+    }
+
+    // ---- Solver contact enumeration (P2c) ----------------------------------
+
+    [Fact]
+    public void SolverContactEnumeration_EmitsContactVisuals_AfterPyramidLands()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new SolverContactEnumerationDemo(null, transport);
+
+        for (var i = 0; i < 120; i++) demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+
+        var green = signal.States.Count(s => s.Id >= SolverContactEnumerationDemo.GreenContactRenderIdBase
+                                             && s.Id < SolverContactEnumerationDemo.BlueContactRenderIdBase);
+        var blue = signal.States.Count(s => s.Id >= SolverContactEnumerationDemo.BlueContactRenderIdBase);
+        Assert.True(green > 0, "no touching contacts extracted from the sensor");
+        Assert.Equal(2 + SolverContactEnumerationDemo.PyramidCount + green + blue, signal.States.Count);
+
+        foreach (var state in signal.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
     // ---- Determinism across the ported set ---------------------------------
 
     [Theory]
@@ -578,6 +675,10 @@ public class PortedDemoTests
     [InlineData("ragdoll-tube")]
     [InlineData("dancer")]
     [InlineData("plump-dancer")]
+    [InlineData("ray-casting")]
+    [InlineData("sweep")]
+    [InlineData("collision-query")]
+    [InlineData("solver-contact-enumeration")]
     public void PortedSet_DeterministicAcrossRuns(string gameKey)
     {
         var first = new CapturingRenderTransport<Transform3DRenderSignal>();
@@ -627,6 +728,10 @@ public class PortedDemoTests
             "ragdoll-tube" => new RagdollTubeDemo(null, transport),
             "dancer" => new DancerDemo(null, transport),
             "plump-dancer" => new PlumpDancerDemo(null, transport),
+            "ray-casting" => new RayCastingDemo(null, transport),
+            "sweep" => new SweepDemo(null, transport),
+            "collision-query" => new CollisionQueryDemo(null, transport),
+            "solver-contact-enumeration" => new SolverContactEnumerationDemo(null, transport),
             _ => throw new ArgumentOutOfRangeException(nameof(gameKey), gameKey, "unknown demo key"),
         };
 }

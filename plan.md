@@ -35,14 +35,14 @@ npm run test:e2e                                     # Playwright over WebView2 
 
 ## Demos
 
-### Done (20/30)
+### Done (24/30)
 
 - [x] **SimpleSelfContainedDemo** — sphere on static floor + ECS orbit markers, tap-fire. Tests 31/31 · E2E green · `docs/screenshots/simple-self-contained*.png`
 - [x] **PyramidDemo** — 12 box pyramids (upstream 40, documented), click cannonball. · `docs/screenshots/pyramid.png`
 - [x] **BouncinessDemo** — 40×40 material sweep (upstream 100×100), 8 substeps. · `docs/screenshots/bounciness.png`
 - [x] **PlanetDemo** — inverse-square gravity, 24×8×24 orbiting sheet (upstream 40×20×40). · `docs/screenshots/planet.png`
 
-### Pending (10/30)
+### Pending (6/30)
 
 Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat-review table`.
 
@@ -68,12 +68,13 @@ Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat
 - [x] **DancerDemo** — 8×8 = 64 dancers (upstream 16×16), cloth dress LOD-clamped, sequential solves · `docs/screenshots/dancer.png`
 - [x] **PlumpDancerDemo** — 4×4 = 16 dancers (upstream 8×8), weld voxel fat suits LOD-clamped · `docs/screenshots/plump-dancer.png`
 
-#### P2c — debug-visual demos (4, need line/ray records + `LinesMesh` client-side)
+#### P2c — debug-visual demos (4) — done
 
-- [ ] **RayCastingDemo** — raycast visualization
-- [ ] **SweepDemo** — sweep test visualization
-- [ ] **CollisionQueryDemo** — broadphase/narrowphase query visualization
-- [ ] **SolverContactEnumerationDemo** — contact enumeration display
+- [x] `LineState` ABI extension (header 6 → 8, stride-12 line region) + hand-written TS decoder + `rendering/lineSets.ts` (`LinesMesh`, per-vertex color)
+- [x] **RayCastingDemo** — 16384 rays × 3 sources, unbatched `Simulation.RayCast` · `docs/screenshots/ray-casting.png`
+- [x] **SweepDemo** — 16 scene-wide sweeps + ghost trails + impact lines (pairwise matrix dropped: unsafe-only API) · `docs/screenshots/sweep.png`
+- [x] **CollisionQueryDemo** — 5×5 queries via managed `CollisionBatcher.Add` · `docs/screenshots/collision-query.png`
+- [x] **SolverContactEnumerationDemo** — `ISolverContactDataExtractor` contact cylinders · `docs/screenshots/solver-contact-enumeration.png`
 
 #### P3 — mesh/assets (6)
 
@@ -88,7 +89,7 @@ Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat
 
 ## Cross-cutting follow-ups
 
-- [x] Main menu scene: 30-demo card grid (20 live / 10 disabled placeholders), `Menu` back
+- [x] Main menu scene: 30-demo card grid (24 live / 6 disabled placeholders), `Menu` back
       button on every demo, memory reset on switch (Babylon scene dispose + C# sim/pinned-buffer
       release + host shared-buffer channel cleanup) — `menu.spec.ts` round-trip E2E
 - [ ] Cloth vertex-record design note in `docs/compat-review.md` before the ClothDemo port

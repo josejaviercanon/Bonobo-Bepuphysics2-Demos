@@ -62,4 +62,27 @@ public class AotCompatibilityTests
             host.Dispose();
         }
     }
+
+    [Test]
+    public async Task DebugVisualDemos_ConnectAndTick()
+    {
+        var host = new SimulationHost(static (_, _, _) => { }, new DemoRegistry().AddGameBepuDemosModules());
+        try
+        {
+            foreach (var gameKey in new[] { "ray-casting", "sweep", "collision-query", "solver-contact-enumeration" })
+            {
+                host.Connect(gameKey);
+                await Assert.That(host.ActiveSimulation).IsNotNull();
+
+                for (var i = 0; i < 10; i++)
+                {
+                    host.Tick(SimulationHost.FixedStepSeconds);
+                }
+            }
+        }
+        finally
+        {
+            host.Dispose();
+        }
+    }
 }

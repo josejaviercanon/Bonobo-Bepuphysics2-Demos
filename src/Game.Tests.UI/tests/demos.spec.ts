@@ -26,6 +26,10 @@ interface HostWindow {
   __ragdollTube?: () => { ground: number; tube: number; bodies: number; visibleInstances: number };
   __dancer?: () => { dancers: number; bodyInstances: number; dressNodes: number; visibleInstances: number };
   __plumpDancer?: () => { dancers: number; bodyInstances: number; suitNodes: number; visibleInstances: number };
+  __rayCasting?: () => { collidables: number; raySegments: number; visibleInstances: number };
+  __sweep?: () => { grid: number; ghostTrails: number; impacts: number; visibleInstances: number };
+  __collisionQuery?: () => { boxes: number; touchedQueries: number; untouchedQueries: number; visibleInstances: number };
+  __solverContactEnumeration?: () => { pyramid: number; contacts: number; visibleInstances: number };
 }
 
 const SCENES = [
@@ -48,6 +52,10 @@ const SCENES = [
   { key: 'ragdoll-tube', hook: '__ragdollTube' },
   { key: 'dancer', hook: '__dancer' },
   { key: 'plump-dancer', hook: '__plumpDancer' },
+  { key: 'ray-casting', hook: '__rayCasting' },
+  { key: 'sweep', hook: '__sweep' },
+  { key: 'collision-query', hook: '__collisionQuery' },
+  { key: 'solver-contact-enumeration', hook: '__solverContactEnumeration' },
 ] as const;
 
 /** Contact demos re-drop their bodies just before the screenshot so particles are visible. */
@@ -65,6 +73,7 @@ const LONG_SETTLE = new Set([
   'ragdoll-tube',
   'dancer',
   'plump-dancer',
+  'solver-contact-enumeration',
 ]);
 
 async function visibleInstances(page: import('@playwright/test').Page, hook: string): Promise<number> {

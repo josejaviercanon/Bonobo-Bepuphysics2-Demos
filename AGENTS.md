@@ -20,10 +20,13 @@ edit it; this repo mirrors the ABI locally (`src/DemoEngine`) instead of referen
 - Desktop (only host): `CoreWebView2SharedBuffer` + `PostSharedBufferToScript(..., ReadOnly)`;
   the page reads the same mapping as `Float64Array` and calls `chrome.webview.releaseBuffer`
   after dispatch. `PostWebMessageAsArrayBuffer` does **not** exist.
-- One signal for every demo: `Transform3DState` (stride 12 float64: id, xyz, quaternion xyzw,
-  scale xyz, lifecycle). Compound children are parent ∘ local records; particles are short-lived
-  records; no demo-specific record type has been needed. Adding one requires a hand-written TS
-  decoder (no generator in this repo) + an `AbiPinTests` update.
+- One signal for every demo: header 8 float64 (`seq, epoch, transformCount, stride, stepMs,
+  tickMs, lineCount, lineStride`) + `Transform3DState` records (stride 12: id, xyz, quaternion
+  xyzw, scale xyz, lifecycle) + optional `LineState` records (stride 12: id, start xyz, end xyz,
+  rgba, reserved) appended after the transforms. Compound children are parent ∘ local records;
+  particles are short-lived records; only the P2c debug-visual demos emit lines (`lineCount = 0`
+  everywhere else). Adding a record type requires a hand-written TS decoder (no generator in this
+  repo) + an `AbiPinTests` update.
 
 ### INPUT_RING_ONLY
 - Player input crosses JS → C# through the single pinned input ring
@@ -69,7 +72,7 @@ edit it; this repo mirrors the ABI locally (`src/DemoEngine`) instead of referen
 
 | Path | What |
 | --- | --- |
-| `src/DemoEngine` | Self-contained mirror of the engine ABI: `PinnedRenderBuffer`, `SignalBuffer` (header 6, stride 12, globals 8), input ring (8×100), `DirectRenderTransport`, `SimulationHost` (fixed-step loop, connect/pause/commands), `DemoModule`/`DemoRegistry` |
+| `src/DemoEngine` | Self-contained mirror of the engine ABI: `PinnedRenderBuffer`, `SignalBuffer` (header 8, transform stride 12 + line stride 12, globals 8), input ring (8×100), `DirectRenderTransport`, `SimulationHost` (fixed-step loop, connect/pause/commands), `DemoModule`/`DemoRegistry` |
 | `src/Game.BepuDemos` | The ported demos + shared helpers (`DemoPoseSet`, `DemoCallbacks`, `RopeHelpers`, `SubgroupFilter`, `RopeFilter`, `RagdollBuilder`, `DemoDancers`, `ClothFilter`, `DeformableFilter`, `DemoMeshHelper`) and the hand-written module glue |
 | `src/DemoHost.WinApp` | WinUI 3 + WebView2 + Native AOT host (the only host): `SimulationHost` in-process, shared-buffer publish, `LocalAssetServer`, dispatcher-timer pump |
 | `src/BepuDemos.UI` | Babylon.js v9 frontend workspace package (`bepu-demos-ui`): 30-demo menu, demo scenes, thin-instance rendering, zero-copy decoders, GUI command buttons |
@@ -80,8 +83,8 @@ edit it; this repo mirrors the ABI locally (`src/DemoEngine`) instead of referen
 | `docs/ai-agents/codebase-truth.md` | Verified commands, port recipe, API facts |
 | `Temp/` | Upstream BepuPhysics2 sources — reference only, never part of the build |
 
-**Demo status: 20/30 ported** (P1–P2b done; P2c debug-visual demos and P3 mesh demos pending).
-Menu shows 20 live cards, 10 disabled placeholders.
+**Demo status: 24/30 ported** (P1–P2c done; P3 mesh demos pending).
+Menu shows 24 live cards, 6 disabled placeholders.
 
 ---
 
@@ -92,10 +95,10 @@ Build frontend assets before .NET commands. Do not run multiple `dotnet` command
 ```powershell
 npm ci && npm run build                  # Vite bundle -> src/BepuDemos.UI/wwwroot/dist
 dotnet build bonoboBepuDemos.slnx
-dotnet run --project src/Game.BepuDemos.Tests        # xUnit v3 (65 tests)
+dotnet run --project src/Game.BepuDemos.Tests        # xUnit v3 (76 tests)
 dotnet run --project src/Game.BepuDemos.Tests.Aot    # TUnit AOT pattern checks
 dotnet publish src/DemoHost.WinApp/DemoHost.WinApp.csproj -c Release -r win-x64 -p:Platform=x64
-npm run test:e2e                         # Playwright over WebView2 CDP (24 tests, screenshots)
+npm run test:e2e                         # Playwright over WebView2 CDP (28 tests, screenshots)
 ```
 
 - `dotnet test` reports **"Zero tests ran"** on this SDK (MTP quirk) — run the test app projects
@@ -123,7 +126,7 @@ npm run test:e2e                         # Playwright over WebView2 CDP (24 test
 5. Unit tests: behavior test + `[InlineData("<key>")]` in
    `PortedDemoTests.PortedSet_DeterministicAcrossRuns` + factory switch.
 6. E2E: `SCENES` + `HostWindow` hook in `src/Game.Tests.UI/tests/demos.spec.ts`; menu counts in
-   `menu.spec.ts` (currently `{ total: 30, live: 20, placeholders: 10 }`).
+   `menu.spec.ts` (currently `{ total: 30, live: 24, placeholders: 6 }`).
 7. Docs: `docs/compat-review.md` status row, `README.md` scene table, `plan.md` counts,
    `docs/ai-agents/codebase-truth.md` when a new API fact is learned.
 

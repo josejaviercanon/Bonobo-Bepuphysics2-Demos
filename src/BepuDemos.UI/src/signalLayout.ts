@@ -6,14 +6,29 @@
 // `npm run typecheck` + the E2E suite cover the TS side. Never hand-edit a value here
 // without changing the pinned test and `docs/compat-review.md`.
 
-/** Standard signal header: [seq, epoch, entityCount, stride, stepMs, tickMs]. */
-export const BUFFER_HEADER_LENGTH = 6;
+/**
+ * Standard signal header:
+ * [seq, epoch, entityCount, stride, stepMs, tickMs, lineCount, lineStride].
+ */
+export const BUFFER_HEADER_LENGTH = 8;
+
+/** Header index of the transform record count (the classic `entityCount`). */
+export const HeaderEntityCountIndex = 2;
+/** Header index of the transform record stride. */
+export const HeaderStrideIndex = 3;
+/** Header index of the appended line-segment record count (0 when the demo emits no lines). */
+export const HeaderLineCountIndex = 6;
+/** Header index of the line-segment record stride. */
+export const HeaderLineStrideIndex = 7;
 
 /** Every signal scalar is an 8-byte double (`Float64Array` on every host). */
 export const ScalarSize = 8;
 
 /** `Transform3DState`: id + position(3) + quaternion(4) + scale(3) + lifecycle. */
 export const Transform3DStateStride = 12;
+
+/** `LineState`: id + start(3) + end(3) + rgba(4) + reserved. */
+export const LineStateStride = 12;
 
 /** The typed-array view every host hands to the page. */
 export type ScalarArray = Float64Array;
@@ -31,6 +46,26 @@ export interface Transform3DState {
     sy: number;
     sz: number;
     lifecycle: number;
+}
+
+/**
+ * Transient colored line segment (debug visuals only: rays, sweep impacts). Unlike
+ * `Transform3DState`, line records carry no lifecycle — the emitting demo rewrites the
+ * whole region every step.
+ */
+export interface LineState {
+    id: number;
+    ax: number;
+    ay: number;
+    az: number;
+    bx: number;
+    by: number;
+    bz: number;
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+    reserved: number;
 }
 
 /** Lifecycle flags carried in the 12th scalar of `Transform3DState`. */

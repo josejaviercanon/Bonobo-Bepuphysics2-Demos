@@ -53,7 +53,7 @@ npm run test:e2e
 ## Demo scenes
 
 The app boots into the **main menu** (`menu`): a 30-card grid of the upstream DemoSet in
-`docs/compat-review.md` order. The twenty ported demos are live cards; the remaining 10 are
+`docs/compat-review.md` order. The twenty-four ported demos are live cards; the remaining 6 are
 disabled "(soon)" placeholders. Every demo scene has a `Menu` back button; switching scenes
 disposes the Babylon scene and releases the C# simulation + its pinned signal buffer.
 
@@ -80,14 +80,19 @@ disposes the Babylon scene and releases the C# simulation + its pinned signal bu
 | `ragdoll-tube` | RagdollTubeDemo | 4×4×11 ragdolls (upstream 4×4×44) in a 12-panel spinning tube (upstream 20) |
 | `dancer` | DancerDemo | 64 dancers 8×8 (upstream 256), cloth dresses LOD-clamped, sequential solves |
 | `plump-dancer` | PlumpDancerDemo | 16 dancers 4×4 (upstream 64), weld/voxel fat suits LOD-clamped |
+| `ray-casting` | RayCastingDemo | 16384 rays × 3 sources (random/frustum/wall) as colored `LineState` segments, `Cycle`/`Rotate`/source buttons |
+| `sweep` | SweepDemo | 16 rotating scene-wide sweeps + 20-pose ghost trails + impact tangent lines |
+| `collision-query` | CollisionQueryDemo | 5×5 shape queries through a `CollisionBatcher`, green/red touched routing |
+| `solver-contact-enumeration` | SolverContactEnumerationDemo | solver contact extraction on a sensor box, impulse-scaled contact cylinders |
 
-The remaining 10 demos and their porting status live in `docs/compat-review.md`.
+The remaining 6 demos and their porting status live in `docs/compat-review.md`.
 
 ## Compatibility rules
 
 - All render state crosses C# -> JS as pinned `Float64Array` memory (never JSON, never
-  per-entity interop calls). `DemoEngine` mirrors the engine header (`6`), the
-  `Transform3DState` stride (`12`) and the globals clock block (`8`) — pinned by unit tests.
+  per-entity interop calls). `DemoEngine` mirrors the engine header (`8`, extended with the P2c
+  `lineCount`/`lineStride` fields), the `Transform3DState` stride (`12`), the appended
+  `LineState` stride (`12`) and the globals clock block (`8`) — pinned by unit tests.
 - Physics is authoritative in C#: deterministic null-`ThreadDispatcher` solves.
 - Presentation-only concerns (camera, GUI, shaders, terrain visuals, cloth display) are
   client-side and never feed simulation state back except through the input ring.
