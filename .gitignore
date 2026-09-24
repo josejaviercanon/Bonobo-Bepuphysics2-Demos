@@ -438,3 +438,7 @@ node_modules/
 output/
 playwright-report/
 test-results/
+
+# Vendored demo assets (OBJ models are tracked despite the Visual Studio *.obj rule)
+!src/Game.BepuDemos/Content/*.obj
+!src/BepuDemos.UI/public/models/*.obj

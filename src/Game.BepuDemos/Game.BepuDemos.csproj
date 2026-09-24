@@ -31,4 +31,10 @@
     <ProjectReference Include="..\DemoEngine\DemoEngine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Vendored upstream demo asset (Temp/Demos/Content/newt.obj). Embedded so the Native
+         AOT host never reads content files from disk; parsed by ObjMeshParser. -->
+    <EmbeddedResource Include="Content\newt.obj" />
+  </ItemGroup>
+
 </Project>

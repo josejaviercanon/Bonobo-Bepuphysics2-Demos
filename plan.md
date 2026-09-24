@@ -15,11 +15,11 @@ screenshot for human review + `docs/compat-review.md` table update.
 
 | Piece | State | Verification |
 | --- | --- | --- |
-| `src/DemoEngine` — ABI mirror (pinned buffers, header=6, stride=12, globals=8, input ring 8×100, dispatcher) | done | 31 unit tests (ABI pins) |
-| `src/Game.BepuDemos` — demo fixtures (Bonobo.Bepuphysics2 1.0.0, Bonobo.ECS 1.0.1, SourceGenerators 1.0.0) | done | determinism, no-NaN, verb tests |
+| `src/DemoEngine` — ABI mirror (pinned buffers, header=8, stride=12, globals=8, input ring 8×100, dispatcher) | done | 10 ABI pin tests |
+| `src/Game.BepuDemos` — demo fixtures (Bonobo.Bepuphysics2 1.0.0, Bonobo.ECS 1.0.1, SourceGenerators 1.0.0) | done | 89 unit tests (behavior, determinism, no-NaN, verbs) |
 | `src/DemoHost.WinApp` — WinUI3 + WebView2 + Native AOT host | done | Release AOT publish green |
-| `src/BepuDemos.UI` — Babylon v9 bundle (thin instances, GridMaterial, main menu grid + back navigation, stats, ring producer) | done | `npm run typecheck` + `npm run build` |
-| `src/Game.Tests.UI` — Playwright CDP suite + screenshots → `docs/screenshots/` | done | 14/14 passing |
+| `src/BepuDemos.UI` — Babylon v9 bundle (thin instances, GridMaterial, OBJ loader, billboards, menu grid + back navigation, stats, ring producer) | done | `npm run typecheck` + `npm run build` |
+| `src/Game.Tests.UI` — Playwright CDP suite + screenshots → `docs/screenshots/` | done | 34/34 passing |
 | `docs/compat-review.md` — 30-demo status table + deviations | done | — |
 
 Commands:
@@ -35,16 +35,13 @@ npm run test:e2e                                     # Playwright over WebView2 
 
 ## Demos
 
-### Done (24/30)
+### Done (30/30)
 
 - [x] **SimpleSelfContainedDemo** — sphere on static floor + ECS orbit markers, tap-fire. Tests 31/31 · E2E green · `docs/screenshots/simple-self-contained*.png`
 - [x] **PyramidDemo** — 12 box pyramids (upstream 40, documented), click cannonball. · `docs/screenshots/pyramid.png`
 - [x] **BouncinessDemo** — 40×40 material sweep (upstream 100×100), 8 substeps. · `docs/screenshots/bounciness.png`
 - [x] **PlanetDemo** — inverse-square gravity, 24×8×24 orbiting sheet (upstream 40×20×40). · `docs/screenshots/planet.png`
 
-### Pending (6/30)
-
-Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat-review table`.
 
 #### P2a — shapes / materials / solver (9) — done
 
@@ -76,25 +73,24 @@ Each task = `[ ] C# sim → scene → unit tests → E2E + screenshot → compat
 - [x] **CollisionQueryDemo** — 5×5 queries via managed `CollisionBatcher.Add` · `docs/screenshots/collision-query.png`
 - [x] **SolverContactEnumerationDemo** — `ISolverContactDataExtractor` contact cylinders · `docs/screenshots/solver-contact-enumeration.png`
 
-#### P3 — mesh/assets (6)
+#### P3 — mesh/assets (6) — done
 
-- [ ] **NewtDemo** — OBJ mesh collidable (C# span parser) + weld/volume constraints; OBJ loaded client-side via `@babylonjs/loaders`
-- [ ] **SponsorDemo** — `newt.obj` + 27 Sponsor PNGs as billboards
-- [ ] **CharacterDemo** — capsule character controller + `newt.obj` static mesh
-- [ ] **CarDemo** — procedural car body/wheels (no external asset)
-- [ ] **TankDemo** — procedural tank (no external asset)
-- [ ] **ClothDemo** — vertex-level signal records → client-side `VertexData` update (needs design note first: cloth vertex records in the transform buffer or a demo-specific record struct + hand-written TS decoder)
+- [x] **CarDemo** — compound body + 4 suspension/hinge/motor wheels, 64 AI cars, 129×129×6 terrain, `VehicleControl` ring packets · `docs/screenshots/car.png`
+- [x] **TankDemo** — body/turret/barrel + 2×5-wheel treads, twist-servo aiming, 32 AI tanks + CCD projectiles, `TankControl` ring packets · `docs/screenshots/tank.png`
+- [x] **NewtDemo** — embedded `newt.obj` span parser + `DumbTetrahedralizer`, weld + volume constraints, heavy ball drop, OBJ ghost client-side · `docs/screenshots/newt.png`
+- [x] **CharacterDemo** — full `CharacterControllers` port (custom solver constraints via `Solver.Register`), capsule actions over legos/fans/tongue/seesaw/platforms + 15× newt, `CharacterMove` ring packets · `docs/screenshots/character.png`
+- [x] **SponsorDemo** — hopping kinematic newts + 150 AI characters + hut rings + 60× overlord newt; 27 sponsor PNG billboards via `@babylonjs/loaders`/`public/sponsors` · `docs/screenshots/sponsor.png`
+- [x] **ClothDemo** — 4×10×30 curtains + 48×48 sheet, `CenterDistanceLimit`/`AreaConstraint` lattice, vertex records → client `VertexData` rebuild (design note: compat-review §6) · `docs/screenshots/cloth.png`
 
 ---
 
 ## Cross-cutting follow-ups
 
-- [x] Main menu scene: 30-demo card grid (24 live / 6 disabled placeholders), `Menu` back
+- [x] Main menu scene: 30-demo card grid (all 30 live), `Menu` back
       button on every demo, memory reset on switch (Babylon scene dispose + C# sim/pinned-buffer
       release + host shared-buffer channel cleanup) — `menu.spec.ts` round-trip E2E
-- [ ] Cloth vertex-record design note in `docs/compat-review.md` before the ClothDemo port
+- [x] Cloth vertex-record design note in `docs/compat-review.md` §6 (transform-record reuse approved and implemented)
 - [x] Per-demo deviations table (grid reductions, input remaps, sequential dancer solves) kept up to date in `docs/compat-review.md` (P2a + P2b rows updated)
 - [x] Shared P2b helper ports: `SubgroupFilter`, `RopeFilter`, `RagdollBuilder`, `DemoDancers`, `ClothFilter`, `DeformableFilter` + the dancer-scene TS factory
-- [ ] E2E: one spec per demo (switch scene → assert instances → screenshot), current `demos.spec.ts` loop extended;
-      new demos become live cards in `src/BepuDemos.UI/src/scenes/menu/sceneMenu.ts`
-- [ ] Keep engine repo untouched; ABI re-check when the engine ABI changes
+- [x] E2E: one spec per demo (switch scene → assert instances → screenshot) — `demos.spec.ts` covers 29 scene specs and `menu.spec.ts` asserts `{ total: 30, live: 30, placeholders: 0 }`
+- [x] Keep engine repo untouched; ABI re-check when the engine ABI changes (P3 adds input packet ids 4..6 locally — documented in compat-review §1/§9)

@@ -16,15 +16,19 @@ public static class InputRingLayout
 /// <summary>
 ///     Packet type ids. Mirrors the engine's <c>[WasmInputPacket(id)]</c> values:
 ///     1 = <see cref="ClickMoveInput"/>, 2 = <see cref="FireBallInput"/>,
-///     3 = <see cref="SceneLoadedInput"/>. Slot layout: slot 0 = id, slots 1..N = fields in
-///     declaration order (mirrored by the TypeScript producer in
-///     <c>src/BepuDemos.UI/src/inputRing.ts</c>).
+///     3 = <see cref="SceneLoadedInput"/>. Ids 4..6 are the P3 player-intent extension
+///     (character/vehicle/tank control) documented in docs/compat-review.md. Slot layout:
+///     slot 0 = id, slots 1..N = fields in declaration order (mirrored by the TypeScript
+///     producer in <c>src/BepuDemos.UI/src/inputRing.ts</c>).
 /// </summary>
 public static class InputPacketIds
 {
     public const double ClickMove = 1d;
     public const double FireBall = 2d;
     public const double SceneLoaded = 3d;
+    public const double CharacterMove = 4d;
+    public const double VehicleControl = 5d;
+    public const double TankControl = 6d;
 }
 
 /// <summary>
@@ -81,6 +85,72 @@ public readonly struct SceneLoadedInput
     public SceneLoadedInput(double ok) => Ok = ok;
 }
 
+/// <summary>
+///     Player intent for a character controller: world-space horizontal movement direction
+///     (already camera-relative, magnitude 0..1) plus jump/sprint buttons. Mirrors the
+///     upstream <c>CharacterInput</c> target-velocity contract.
+/// </summary>
+public readonly struct CharacterMoveInput
+{
+    public readonly double MoveX;
+    public readonly double MoveZ;
+    public readonly double Jump;
+    public readonly double Sprint;
+
+    public CharacterMoveInput(double moveX, double moveZ, double jump, double sprint)
+    {
+        MoveX = moveX;
+        MoveZ = moveZ;
+        Jump = jump;
+        Sprint = sprint;
+    }
+}
+
+/// <summary>Player intent for a wheeled vehicle: throttle/steer in -1..1 plus zoom/brake buttons.</summary>
+public readonly struct VehicleControlInput
+{
+    public readonly double Throttle;
+    public readonly double Steer;
+    public readonly double Zoom;
+    public readonly double Brake;
+
+    public VehicleControlInput(double throttle, double steer, double zoom, double brake)
+    {
+        Throttle = throttle;
+        Steer = steer;
+        Zoom = zoom;
+        Brake = brake;
+    }
+}
+
+/// <summary>
+///     Player intent for a tank: forward/turn in -1..1, turret aim rates in -1..1 plus
+///     fire/zoom/brake buttons (7 payload slots, the full ring record).
+/// </summary>
+public readonly struct TankControlInput
+{
+    public readonly double Move;
+    public readonly double Turn;
+    public readonly double AimHorizontal;
+    public readonly double AimVertical;
+    public readonly double Fire;
+    public readonly double Zoom;
+    public readonly double Brake;
+
+    public TankControlInput(
+        double move, double turn, double aimHorizontal, double aimVertical,
+        double fire, double zoom, double brake)
+    {
+        Move = move;
+        Turn = turn;
+        AimHorizontal = aimHorizontal;
+        AimVertical = aimVertical;
+        Fire = fire;
+        Zoom = zoom;
+        Brake = brake;
+    }
+}
+
 /// <summary>Routing surface for decoded input-ring packets (mirrors the engine sink interfaces).</summary>
 public interface IClickMoveSink
 {
@@ -95,6 +165,21 @@ public interface IFireBallSink
 public interface ISceneLoadedSink
 {
     void OnSceneLoaded(in SceneLoadedInput input);
+}
+
+public interface ICharacterMoveSink
+{
+    void OnCharacterMove(in CharacterMoveInput input);
+}
+
+public interface IVehicleControlSink
+{
+    void OnVehicleControl(in VehicleControlInput input);
+}
+
+public interface ITankControlSink
+{
+    void OnTankControl(in TankControlInput input);
 }
 
 /// <summary>
@@ -134,6 +219,36 @@ public static class InputDispatcher
                 if (sink is ISceneLoadedSink sceneLoaded)
                 {
                     sceneLoaded.OnSceneLoaded(new SceneLoadedInput(record[1]));
+                    return true;
+                }
+
+                return false;
+
+            case InputPacketIds.CharacterMove:
+                if (sink is ICharacterMoveSink characterMove)
+                {
+                    characterMove.OnCharacterMove(new CharacterMoveInput(
+                        record[1], record[2], record[3], record[4]));
+                    return true;
+                }
+
+                return false;
+
+            case InputPacketIds.VehicleControl:
+                if (sink is IVehicleControlSink vehicleControl)
+                {
+                    vehicleControl.OnVehicleControl(new VehicleControlInput(
+                        record[1], record[2], record[3], record[4]));
+                    return true;
+                }
+
+                return false;
+
+            case InputPacketIds.TankControl:
+                if (sink is ITankControlSink tankControl)
+                {
+                    tankControl.OnTankControl(new TankControlInput(
+                        record[1], record[2], record[3], record[4], record[5], record[6], record[7]));
                     return true;
                 }
 

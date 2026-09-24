@@ -8,10 +8,10 @@ code in this repo (builds, tests, E2E, screenshots). Prefer these facts over mem
 ```powershell
 npm ci && npm run build                  # bundle -> src/BepuDemos.UI/wwwroot/dist
 dotnet build bonoboBepuDemos.slnx
-dotnet run --project src/Game.BepuDemos.Tests        # xUnit v3 (65 tests)
+dotnet run --project src/Game.BepuDemos.Tests        # xUnit v3 (89 tests)
 dotnet run --project src/Game.BepuDemos.Tests.Aot    # TUnit
 dotnet publish src/DemoHost.WinApp/DemoHost.WinApp.csproj -c Release -r win-x64 -p:Platform=x64
-npm run test:e2e                         # root shortcut -> Playwright over WebView2 CDP (24 tests)
+npm run test:e2e                         # root shortcut -> Playwright over WebView2 CDP (34 tests)
 ```
 
 - `dotnet test` reports "Zero tests ran" on this SDK (MTP quirk) — run the test apps directly.
@@ -36,7 +36,8 @@ npm run test:e2e                         # root shortcut -> Playwright over WebV
 5. Unit tests: behavior test + `[InlineData("<key>")]` in
    `PortedDemoTests.PortedSet_DeterministicAcrossRuns` + factory switch.
 6. E2E: `SCENES` + `HostWindow` hook in `src/Game.Tests.UI/tests/demos.spec.ts`; menu counts in
-   `menu.spec.ts` (currently `{ total: 30, live: 24, placeholders: 6 }`).
+   `menu.spec.ts` (currently `{ total: 30, live: 30, placeholders: 0 }`). Add the key to
+   `LONG_SETTLE` when the fixture needs more than 2.5 s to settle.
 7. Docs: `docs/compat-review.md` status row, `README.md` scene table, `plan.md` counts.
 
 Shared C# helpers: `DemoPoseSet` (render-id → body/static registry, pose sync, batched emit),
@@ -44,7 +45,11 @@ Shared C# helpers: `DemoPoseSet` (render-id → body/static registry, pose sync,
 `SubgroupFilteredCallbacks`), `RopeFilter` (`RopeFilter` + `RopeNarrowPhaseCallbacks`),
 `RagdollBuilder` (`AddRagdoll`, capsule/pose helpers), `DemoDancers` (main dancer + per-dancer
 cosmetic simulations, motion-history replay), `ClothFilter`/`DeformableFilter` (self-collision
-filters for the dancer dress/suit), `DemoMeshHelper.CreateDeformedPlane`.
+filters for the dancer dress/suit), `DemoMeshHelper.CreateDeformedPlane`, `ObjMeshParser` +
+`DemoContent` (embedded `Content/newt.obj` text), `CarHelpers` (simple car/controller/track),
+`TankHelpers` (tank parts/controller/AI/callbacks), `NewtTetrahedralizer`, `Characters/`
+(`CharacterControllers` + `CharacterMotionConstraint` + `CharacterInput` +
+`CharacterNarrowphaseCallbacks` — demo-side dynamic character controller system).
 Shared TS helpers: `rendering/ground.ts`, `rendering/shapeSets.ts` (box/sphere/capsule/cylinder),
 `rendering/instanceSets.ts`, `rendering/thinInstances.ts`, `rendering/lineSets.ts` (fixed-capacity
 per-vertex-color `LinesMesh`), `rendering/deformedPlane.ts` (client duplicate of
@@ -107,6 +112,31 @@ per-vertex-color `LinesMesh`), `rendering/deformedPlane.ts` (client duplicate of
   - `QuickList<T>` exposes `Count` and `Span` as **fields** (`Span` is a `Buffer<T>`); `Buffer<T>`
     converts implicitly to `Span<T>`.
   - `BodyDescription.CreateConvexDynamic(position, mass, Shapes, shape)` builds the sensor body.
+- P3 API/asset facts:
+  - `Solver.Register<TConstraintDescription>()` works for demo-side custom constraints (the
+    package exposes `OneBodyTypeProcessor`/`TwoBodyTypeProcessor`, `IOneBodyConstraintFunctions`/
+    `ITwoBodyConstraintFunctions`, `AccessAll`, `GatherScatter.GetOffsetInstance`,
+    `TypeProcessor`, `TypeBatch`, `IOneBodyConstraintDescription`/`ITwoBodyConstraintDescription`).
+    `CharacterControllers` registers `BatchTypeId` 50/51 and hooks
+    `simulation.Timestepper.BeforeCollisionDetection` + `CollisionsDetected`
+    (`Action<float, IThreadDispatcher?>`).
+  - `new CollidableDescription()` (default) means **no collidable** (verified: overlapping bodies
+    with it do not generate contacts) — use it for internal deformable vertices.
+  - `BodyReference.Awake` can be true in the same step where the sleeper deactivates the body;
+    demo-side character code should use a negative body deactivation threshold (`-1f`) when input
+    can arrive one step behind the goals.
+  - `new TypedIndex(type, index).Packed` sets high bits for the speculative margin; compare
+    collidables by `Packed`, never by `Index` (see `TryReportContacts`).
+  - OBJ: vendored `Temp/Demos/Content/newt.obj` (with `mtllib` stripped) lives both embedded in
+    `Game.BepuDemos` (`ObjMeshParser.Parse(DemoContent.NewtObjText)`) and as a Vite public asset
+    (`src/BepuDemos.UI/public/models/newt.obj`, URL `/dist/models/newt.obj`, loaded by
+    `import '@babylonjs/loaders/OBJ'` + `SceneLoader.ImportMeshAsync`). 27 sponsor PNGs live in
+    `public/sponsors/` (billboards use `CreatePlane` + `Mesh.BILLBOARDMODE_ALL`).
+  - Input ring packet ids 4..6 are the P3 player-intent extension (`CharacterMove`,
+    `VehicleControl`, `TankControl`); add new fields to `DemoEngine.Inputs.Inputs.cs`,
+    `BepuDemos.UI/src/signalLayout.ts`, `inputRing.ts` and the `AbiPinTests` pin together.
+  - Thin instances only count in the stats overlay when the mesh name starts with `demo-`
+    (`sceneRunner` filters `mesh.name.startsWith('demo-')`).
 
 ## Signal / E2E contract
 
@@ -122,6 +152,9 @@ per-vertex-color `LinesMesh`), `rendering/deformedPlane.ts` (client duplicate of
 - Scene hook contract: every scene sets `window.__<key>()` returning at least
   `{ visibleInstances }`; E2E polls it before screenshotting to `docs/screenshots/<game-key>.png`.
 - Contact demos click `btn-drop` before their screenshot so particles are visible.
+- Cloth vertices reuse `Transform3DState` records (id = `10000 + panel·4096 + row·width +
+  column`, quaternion unused, scale = node diameter); the client rebuilds one updatable grid
+  `VertexData` mesh per panel (design note: compat-review §6).
 - The scene must route records by render-id range (never by arrival order); the C# fixture owns
   the id ranges and documents them in its class comment.
 - Capsule records emit scale 1: the client bakes one capsule mesh per (radius, length) pair via

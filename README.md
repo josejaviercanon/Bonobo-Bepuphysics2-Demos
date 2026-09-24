@@ -53,9 +53,9 @@ npm run test:e2e
 ## Demo scenes
 
 The app boots into the **main menu** (`menu`): a 30-card grid of the upstream DemoSet in
-`docs/compat-review.md` order. The twenty-four ported demos are live cards; the remaining 6 are
-disabled "(soon)" placeholders. Every demo scene has a `Menu` back button; switching scenes
-disposes the Babylon scene and releases the C# simulation + its pinned signal buffer.
+`docs/compat-review.md` order. All thirty demos are live cards (the full corpus is ported).
+Every demo scene has a `Menu` back button; switching scenes disposes the Babylon scene and
+releases the C# simulation + its pinned signal buffer.
 
 | Scene key | Upstream demo | Notes |
 | --- | --- | --- |
@@ -84,8 +84,14 @@ disposes the Babylon scene and releases the C# simulation + its pinned signal bu
 | `sweep` | SweepDemo | 16 rotating scene-wide sweeps + 20-pose ghost trails + impact tangent lines |
 | `collision-query` | CollisionQueryDemo | 5×5 shape queries through a `CollisionBatcher`, green/red touched routing |
 | `solver-contact-enumeration` | SolverContactEnumerationDemo | solver contact extraction on a sensor box, impulse-scaled contact cylinders |
+| `car` | CarDemo | player car (WASD/Shift/Space) + 64 AI cars on a quarter-circle track, 129×129×6 terrain |
+| `tank` | TankDemo | player tank (WASD/IJKL/Space/Shift/B) + 32 AI tanks duelling with CCD projectiles |
+| `newt` | NewtDemo | 8 voxel-tetrahedralized newts (1 824 nodes each) welded + volume-constrained, heavy ball drop, OBJ ghost |
+| `character` | CharacterDemo | full dynamic character controller (custom constraints) over legos/fans/tongue/seesaw/platforms + 15× newt |
+| `sponsor` | SponsorDemo | hopping sponsor newts chasing 150 AI characters through huts, 27 sponsor PNG billboards, 60× overlord newt |
+| `cloth` | ClothDemo | 4 hanging 10×30 curtains + a 48×48 sheet, vertex-level records rebuilt into client `VertexData` meshes |
 
-The remaining 6 demos and their porting status live in `docs/compat-review.md`.
+Per-demo status and every deliberate deviation live in `docs/compat-review.md`.
 
 ## Compatibility rules
 

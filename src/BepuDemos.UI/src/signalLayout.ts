@@ -91,11 +91,18 @@ export const GlobalClockStateIndex = {
 export const InputSlotSize = 8;
 export const InputQueueCapacity = 100;
 
-/** Packet ids and field slot indexes (slot 0 = id, slots 1..7 = fields in C# order). */
+/**
+ * Packet ids and field slot indexes (slot 0 = id, slots 1..7 = fields in C# order).
+ * Ids 4..6 are the P3 player-intent extension (character/vehicle/tank control), pinned by
+ * `Game.BepuDemos.Tests/AbiPinTests.cs`.
+ */
 export const PacketType = {
     clickMove: 1,
     fireBall: 2,
     sceneLoaded: 3,
+    characterMove: 4,
+    vehicleControl: 5,
+    tankControl: 6,
 } as const;
 
 export const ClickMovePacketFields = {
@@ -116,4 +123,28 @@ export const FireBallPacketFields = {
 
 export const SceneLoadedPacketFields = {
     ok: 1,
+} as const;
+
+export const CharacterMovePacketFields = {
+    moveX: 1,
+    moveZ: 2,
+    jump: 3,
+    sprint: 4,
+} as const;
+
+export const VehicleControlPacketFields = {
+    throttle: 1,
+    steer: 2,
+    zoom: 3,
+    brake: 4,
+} as const;
+
+export const TankControlPacketFields = {
+    move: 1,
+    turn: 2,
+    aimHorizontal: 3,
+    aimVertical: 4,
+    fire: 5,
+    zoom: 6,
+    brake: 7,
 } as const;

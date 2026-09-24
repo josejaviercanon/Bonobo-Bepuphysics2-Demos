@@ -65,6 +65,51 @@ public class AbiPinTests
         Assert.Equal(1d, InputPacketIds.ClickMove);
         Assert.Equal(2d, InputPacketIds.FireBall);
         Assert.Equal(3d, InputPacketIds.SceneLoaded);
+        Assert.Equal(4d, InputPacketIds.CharacterMove);
+        Assert.Equal(5d, InputPacketIds.VehicleControl);
+        Assert.Equal(6d, InputPacketIds.TankControl);
+    }
+
+    private sealed class PacketRecorder : ICharacterMoveSink, IVehicleControlSink, ITankControlSink
+    {
+        public CharacterMoveInput CharacterMove;
+        public VehicleControlInput VehicleControl;
+        public TankControlInput TankControl;
+
+        public void OnCharacterMove(in CharacterMoveInput input) => CharacterMove = input;
+
+        public void OnVehicleControl(in VehicleControlInput input) => VehicleControl = input;
+
+        public void OnTankControl(in TankControlInput input) => TankControl = input;
+    }
+
+    [Fact]
+    public void InputDispatcher_RoutesP3PlayerIntents()
+    {
+        var recorder = new PacketRecorder();
+
+        Assert.True(InputDispatcher.Dispatch(new[] { 4d, 0.5d, -0.25d, 1d, 0d, 0d, 0d, 0d }, recorder));
+        Assert.Equal(0.5d, recorder.CharacterMove.MoveX);
+        Assert.Equal(-0.25d, recorder.CharacterMove.MoveZ);
+        Assert.Equal(1d, recorder.CharacterMove.Jump);
+        Assert.Equal(0d, recorder.CharacterMove.Sprint);
+
+        Assert.True(InputDispatcher.Dispatch(new[] { 5d, -1d, 0.75d, 1d, 0d, 0d, 0d, 0d }, recorder));
+        Assert.Equal(-1d, recorder.VehicleControl.Throttle);
+        Assert.Equal(0.75d, recorder.VehicleControl.Steer);
+        Assert.Equal(1d, recorder.VehicleControl.Zoom);
+        Assert.Equal(0d, recorder.VehicleControl.Brake);
+
+        Assert.True(InputDispatcher.Dispatch(new[] { 6d, 1d, -1d, 0.5d, -0.5d, 1d, 1d, 0d }, recorder));
+        Assert.Equal(1d, recorder.TankControl.Move);
+        Assert.Equal(-1d, recorder.TankControl.Turn);
+        Assert.Equal(0.5d, recorder.TankControl.AimHorizontal);
+        Assert.Equal(-0.5d, recorder.TankControl.AimVertical);
+        Assert.Equal(1d, recorder.TankControl.Fire);
+        Assert.Equal(1d, recorder.TankControl.Zoom);
+        Assert.Equal(0d, recorder.TankControl.Brake);
+
+        Assert.False(InputDispatcher.Dispatch(new[] { 99d, 0d, 0d, 0d, 0d, 0d, 0d, 0d }, recorder));
     }
 
     [Fact]

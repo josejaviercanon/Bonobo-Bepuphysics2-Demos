@@ -30,14 +30,14 @@ interface MenuItem {
  * Ported demos carry their scene key; the rest are disabled "soon" cards.
  */
 const MENU_ITEMS: MenuItem[] = [
-    { n: 1, label: 'Car', key: '' },
-    { n: 2, label: 'Tank', key: '' },
-    { n: 3, label: 'Character', key: '' },
+    { n: 1, label: 'Car', key: 'car' },
+    { n: 2, label: 'Tank', key: 'tank' },
+    { n: 3, label: 'Character', key: 'character' },
     { n: 4, label: 'Ragdoll Tube', key: 'ragdoll-tube' },
     { n: 5, label: 'Pyramid', key: 'pyramid' },
     { n: 6, label: 'Colosseum', key: 'colosseum' },
-    { n: 7, label: 'Newt', key: '' },
-    { n: 8, label: 'Cloth', key: '' },
+    { n: 7, label: 'Newt', key: 'newt' },
+    { n: 8, label: 'Cloth', key: 'cloth' },
     { n: 9, label: 'Dancer', key: 'dancer' },
     { n: 10, label: 'Plump Dancer', key: 'plump-dancer' },
     { n: 11, label: 'Continuous Collision', key: 'continuous-collision-detection' },
@@ -58,7 +58,7 @@ const MENU_ITEMS: MenuItem[] = [
     { n: 26, label: 'Solver Contact Enum', key: 'solver-contact-enumeration' },
     { n: 27, label: 'Custom Voxel', key: 'custom-voxel-collidable' },
     { n: 28, label: 'Block Chain', key: 'block-chain' },
-    { n: 29, label: 'Sponsor', key: '' },
+    { n: 29, label: 'Sponsor', key: 'sponsor' },
     { n: 30, label: 'Simple Self Contained', key: 'simple-self-contained' },
 ];
 

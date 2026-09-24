@@ -32,6 +32,8 @@ edit it; this repo mirrors the ABI locally (`src/DemoEngine`) instead of referen
 - Player input crosses JS → C# through the single pinned input ring
   (`DemoEngine.Inputs.InputRingLayout`, 8 slots × 100 records): slot 0 = packet id, slots 1..7 =
   fields; JS publishes with `Atomics.store`; the host drains it in `SimulationHost.Tick`.
+  Packet ids: 1 click-move, 2 fire-ball, 3 scene-loaded, plus the P3 extension 4 character-move,
+  5 vehicle-control, 6 tank-control (hand-written dispatcher + sinks + `AbiPinTests` pin).
 - Never add a per-input `[JSExport]`, JSON payload, or DOM event path for gameplay input.
   Low-frequency sim commands go through the existing `command:{game}:{verb}` message path
   (`IDemoCommands.TryCommand` on the C# side).
@@ -73,7 +75,7 @@ edit it; this repo mirrors the ABI locally (`src/DemoEngine`) instead of referen
 | Path | What |
 | --- | --- |
 | `src/DemoEngine` | Self-contained mirror of the engine ABI: `PinnedRenderBuffer`, `SignalBuffer` (header 8, transform stride 12 + line stride 12, globals 8), input ring (8×100), `DirectRenderTransport`, `SimulationHost` (fixed-step loop, connect/pause/commands), `DemoModule`/`DemoRegistry` |
-| `src/Game.BepuDemos` | The ported demos + shared helpers (`DemoPoseSet`, `DemoCallbacks`, `RopeHelpers`, `SubgroupFilter`, `RopeFilter`, `RagdollBuilder`, `DemoDancers`, `ClothFilter`, `DeformableFilter`, `DemoMeshHelper`) and the hand-written module glue |
+| `src/Game.BepuDemos` | The ported demos + shared helpers (`DemoPoseSet`, `DemoCallbacks`, `RopeHelpers`, `SubgroupFilter`, `RopeFilter`, `RagdollBuilder`, `DemoDancers`, `ClothFilter`, `DeformableFilter`, `DemoMeshHelper`, `ObjMeshParser`, `CarHelpers`, `TankHelpers`, `NewtTetrahedralizer`, `Characters/`) and the hand-written module glue; `Content/newt.obj` is embedded |
 | `src/DemoHost.WinApp` | WinUI 3 + WebView2 + Native AOT host (the only host): `SimulationHost` in-process, shared-buffer publish, `LocalAssetServer`, dispatcher-timer pump |
 | `src/BepuDemos.UI` | Babylon.js v9 frontend workspace package (`bepu-demos-ui`): 30-demo menu, demo scenes, thin-instance rendering, zero-copy decoders, GUI command buttons |
 | `src/Game.BepuDemos.Tests` | xUnit v3: ABI pins, demo behavior, determinism across runs |
@@ -83,8 +85,7 @@ edit it; this repo mirrors the ABI locally (`src/DemoEngine`) instead of referen
 | `docs/ai-agents/codebase-truth.md` | Verified commands, port recipe, API facts |
 | `Temp/` | Upstream BepuPhysics2 sources — reference only, never part of the build |
 
-**Demo status: 24/30 ported** (P1–P2c done; P3 mesh demos pending).
-Menu shows 24 live cards, 6 disabled placeholders.
+**Demo status: 30/30 ported** (P1–P3 done). Menu shows 30 live cards, no placeholders.
 
 ---
 
@@ -95,10 +96,10 @@ Build frontend assets before .NET commands. Do not run multiple `dotnet` command
 ```powershell
 npm ci && npm run build                  # Vite bundle -> src/BepuDemos.UI/wwwroot/dist
 dotnet build bonoboBepuDemos.slnx
-dotnet run --project src/Game.BepuDemos.Tests        # xUnit v3 (76 tests)
+dotnet run --project src/Game.BepuDemos.Tests        # xUnit v3 (89 tests)
 dotnet run --project src/Game.BepuDemos.Tests.Aot    # TUnit AOT pattern checks
 dotnet publish src/DemoHost.WinApp/DemoHost.WinApp.csproj -c Release -r win-x64 -p:Platform=x64
-npm run test:e2e                         # Playwright over WebView2 CDP (28 tests, screenshots)
+npm run test:e2e                         # Playwright over WebView2 CDP (34 tests, screenshots)
 ```
 
 - `dotnet test` reports **"Zero tests ran"** on this SDK (MTP quirk) — run the test app projects
@@ -126,7 +127,7 @@ npm run test:e2e                         # Playwright over WebView2 CDP (28 test
 5. Unit tests: behavior test + `[InlineData("<key>")]` in
    `PortedDemoTests.PortedSet_DeterministicAcrossRuns` + factory switch.
 6. E2E: `SCENES` + `HostWindow` hook in `src/Game.Tests.UI/tests/demos.spec.ts`; menu counts in
-   `menu.spec.ts` (currently `{ total: 30, live: 24, placeholders: 6 }`).
+   `menu.spec.ts` (currently `{ total: 30, live: 30, placeholders: 0 }`).
 7. Docs: `docs/compat-review.md` status row, `README.md` scene table, `plan.md` counts,
    `docs/ai-agents/codebase-truth.md` when a new API fact is learned.
 

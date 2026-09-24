@@ -10,6 +10,14 @@ BepuPhysics2, Copyright (c) Ross Nordby, licensed under the Apache License 2.0.
 The `Bonobo.Bepuphysics2` NuGet package is a namespace-rebranded build of BepuPhysics2
 (same license, Apache-2.0).
 
+## Vendored demo assets
+
+`src/Game.BepuDemos/Content/newt.obj`, `src/BepuDemos.UI/public/models/newt.obj` and the 27
+`src/BepuDemos.UI/public/sponsors/*.png` images are copied from the upstream BepuPhysics2 demo
+content (`Temp/Demos/Content/`), Copyright (c) Ross Nordby, Apache-2.0. The sponsor images are
+fan/backer reward art from the upstream demo and are reproduced here only as part of the ported
+demo fixture.
+
 ## Bonobo engine (host/pattern reference)
 
 `src/DemoEngine` mirrors the Bonobo engine's zero-copy host patterns

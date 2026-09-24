@@ -40,6 +40,12 @@ interface HostHooks {
   __sweep?: () => { visibleInstances: number };
   __collisionQuery?: () => { visibleInstances: number };
   __solverContactEnumeration?: () => { visibleInstances: number };
+  __car?: () => { visibleInstances: number };
+  __tank?: () => { visibleInstances: number };
+  __newt?: () => { visibleInstances: number };
+  __character?: () => { visibleInstances: number };
+  __sponsor?: () => { visibleInstances: number };
+  __cloth?: () => { visibleInstances: number };
 }
 
 const DEMOS = [
@@ -67,6 +73,12 @@ const DEMOS = [
   { key: 'sweep', hook: '__sweep' },
   { key: 'collision-query', hook: '__collisionQuery' },
   { key: 'solver-contact-enumeration', hook: '__solverContactEnumeration' },
+  { key: 'car', hook: '__car' },
+  { key: 'tank', hook: '__tank' },
+  { key: 'newt', hook: '__newt' },
+  { key: 'character', hook: '__character' },
+  { key: 'sponsor', hook: '__sponsor' },
+  { key: 'cloth', hook: '__cloth' },
 ] as const;
 
 const readMenu = (page: import('@playwright/test').Page) =>
@@ -96,9 +108,9 @@ async function goToMenu(page: import('@playwright/test').Page): Promise<void> {
 }
 
 /**
- * Main-menu E2E: the boot scene is the 30-demo card grid. Twenty cards are live (they
- * connect their C# fixture through the reserved `menu` -> demo key switch), 10 are disabled
- * pending ports. Screenshots are committed for human review (`docs/screenshots/menu*.png`).
+ * Main-menu E2E: the boot scene is the fully ported 30-demo card grid. Every card is live (each
+ * connects its C# fixture through the reserved `menu` -> demo key switch). Screenshots are
+ * committed for human review (`docs/screenshots/menu*.png`).
  */
 test.describe('main menu scene', () => {
   test('renders the 30-demo menu grid', async ({ winAppPage: page }) => {
@@ -111,16 +123,15 @@ test.describe('main menu scene', () => {
     await goToMenu(page);
 
     const menu = await readMenu(page);
-    expect(menu).toEqual({ total: 30, live: 24, placeholders: 6 });
+    expect(menu).toEqual({ total: 30, live: 30, placeholders: 0 });
 
-    // Every demo slot has a card; the four ported ones are enabled, the rest are disabled.
+    // Every demo slot has an enabled card; no placeholders remain.
     for (const demo of DEMOS) {
       expect(await guiControlExists(page, `btn-menu-${demo.key}`), `${demo.key} card missing`).toBe(true);
       expect(await guiControlEnabled(page, `btn-menu-${demo.key}`)).toBe(true);
     }
-    expect(await guiControlExists(page, 'btn-menu-slot-1')).toBe(true);
-    expect(await guiControlEnabled(page, 'btn-menu-slot-1')).toBe(false);
-    expect(await guiControlEnabled(page, 'btn-menu-slot-29')).toBe(false);
+    expect(await guiControlExists(page, 'btn-menu-slot-1')).toBe(false);
+    expect(await guiControlExists(page, 'btn-menu-slot-29')).toBe(false);
 
     // The overlay actually laid out (a zero measure would render nothing).
     const title = await guiControlMeasure(page, 'menu-title');
@@ -157,7 +168,7 @@ test.describe('main menu scene', () => {
       // demo simulation + its pinned signal buffer (the `menu` key is unknown by design).
       await clickGuiControl(page, 'btn-scene-menu');
       await waitForMenu(page);
-      expect(await readMenu(page)).toEqual({ total: 30, live: 24, placeholders: 6 });
+      expect(await readMenu(page)).toEqual({ total: 30, live: 30, placeholders: 0 });
       expect(await page.evaluate((hookName) => {
         const hooks = window as unknown as Record<string, unknown>;
         return hooks[hookName] === undefined;

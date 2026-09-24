@@ -38,6 +38,12 @@ public static class BepuDemosModules
         registry.AddModule(SweepDemo.CreateModule());
         registry.AddModule(CollisionQueryDemo.CreateModule());
         registry.AddModule(SolverContactEnumerationDemo.CreateModule());
+        registry.AddModule(CarDemo.CreateModule());
+        registry.AddModule(TankDemo.CreateModule());
+        registry.AddModule(NewtDemo.CreateModule());
+        registry.AddModule(CharacterDemo.CreateModule());
+        registry.AddModule(SponsorDemo.CreateModule());
+        registry.AddModule(ClothDemo.CreateModule());
         return registry;
     }
 }

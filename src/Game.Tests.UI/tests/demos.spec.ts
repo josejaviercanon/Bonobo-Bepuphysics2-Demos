@@ -30,6 +30,12 @@ interface HostWindow {
   __sweep?: () => { grid: number; ghostTrails: number; impacts: number; visibleInstances: number };
   __collisionQuery?: () => { boxes: number; touchedQueries: number; untouchedQueries: number; visibleInstances: number };
   __solverContactEnumeration?: () => { pyramid: number; contacts: number; visibleInstances: number };
+  __car?: () => { player: number; aiCars: number; buildings: number; visibleInstances: number };
+  __tank?: () => { tanks: number; projectiles: number; buildings: number; visibleInstances: number };
+  __newt?: () => { newts: number; nodes: number; ball: number; visibleInstances: number };
+  __character?: () => { legos: number; platforms: number; character: number; visibleInstances: number };
+  __sponsor?: () => { newts: number; characters: number; huts: number; billboards: number; visibleInstances: number };
+  __cloth?: () => { panels: number; nodes: number; bars: number; visibleInstances: number };
 }
 
 const SCENES = [
@@ -56,6 +62,12 @@ const SCENES = [
   { key: 'sweep', hook: '__sweep' },
   { key: 'collision-query', hook: '__collisionQuery' },
   { key: 'solver-contact-enumeration', hook: '__solverContactEnumeration' },
+  { key: 'car', hook: '__car' },
+  { key: 'tank', hook: '__tank' },
+  { key: 'newt', hook: '__newt' },
+  { key: 'character', hook: '__character' },
+  { key: 'sponsor', hook: '__sponsor' },
+  { key: 'cloth', hook: '__cloth' },
 ] as const;
 
 /** Contact demos re-drop their bodies just before the screenshot so particles are visible. */
@@ -74,6 +86,12 @@ const LONG_SETTLE = new Set([
   'dancer',
   'plump-dancer',
   'solver-contact-enumeration',
+  'car',
+  'tank',
+  'newt',
+  'character',
+  'sponsor',
+  'cloth',
 ]);
 
 async function visibleInstances(page: import('@playwright/test').Page, hook: string): Promise<number> {

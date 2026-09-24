@@ -25,6 +25,12 @@ import { createRayCastingScene } from './src/scenes/rayCasting/sceneRayCasting';
 import { createSweepScene } from './src/scenes/sweep/sceneSweep';
 import { createCollisionQueryScene } from './src/scenes/collisionQuery/sceneCollisionQuery';
 import { createSolverContactEnumerationScene } from './src/scenes/solverContactEnumeration/sceneSolverContactEnumeration';
+import { createCarScene } from './src/scenes/car/sceneCar';
+import { createTankScene } from './src/scenes/tank/sceneTank';
+import { createNewtScene } from './src/scenes/newt/sceneNewt';
+import { createCharacterScene } from './src/scenes/character/sceneCharacter';
+import { createSponsorScene } from './src/scenes/sponsor/sceneSponsor';
+import { createClothScene } from './src/scenes/cloth/sceneCloth';
 
 /**
  * Scene registry: one entry per imported Bepu demo plus the main menu. The game key is the
@@ -157,6 +163,36 @@ const SCENES: Record<string, SceneDefinition> = {
         gameKey: 'solver-contact-enumeration',
         label: 'Solver Contact Enum',
         create: createSolverContactEnumerationScene,
+    },
+    car: {
+        gameKey: 'car',
+        label: 'Car',
+        create: createCarScene,
+    },
+    tank: {
+        gameKey: 'tank',
+        label: 'Tank',
+        create: createTankScene,
+    },
+    newt: {
+        gameKey: 'newt',
+        label: 'Newt',
+        create: createNewtScene,
+    },
+    character: {
+        gameKey: 'character',
+        label: 'Character',
+        create: createCharacterScene,
+    },
+    sponsor: {
+        gameKey: 'sponsor',
+        label: 'Sponsor',
+        create: createSponsorScene,
+    },
+    cloth: {
+        gameKey: 'cloth',
+        label: 'Cloth',
+        create: createClothScene,
     },
 };
 

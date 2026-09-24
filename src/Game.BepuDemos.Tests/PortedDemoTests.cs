@@ -652,6 +652,205 @@ public class PortedDemoTests
         }
     }
 
+    // ---- Cars (P3) ---------------------------------------------------------
+
+    [Fact]
+    public void Car_EmitsEveryCarPart_AndPlayerThrottleMovesCar()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new CarDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var first = transport.Last!;
+
+        Assert.Equal(CarDemo.MaxTransformCount, first.States.Count);
+        Assert.Equal(CarDemo.BuildingCount, first.States.Count(s => s.Id >= CarDemo.BuildingRenderIdBase));
+        Assert.Equal(6, first.States.Count(s =>
+            s.Id >= CarDemo.CarRenderIdBase && s.Id < CarDemo.CarRenderIdBase + CarDemo.CarRenderIdStride));
+
+        // Player car works: orientation.Z is forward, so throttle +1 drives toward +Z. The car
+        // spawns 35 units above the flattened track, so give it ~4 s to fall and land first.
+        for (var i = 1; i < 240; i++) demo.Step(1.0 / 60.0);
+        var startZ = StateById(transport.Last!, CarDemo.CarRenderIdBase + CarDemo.BodyChildOffset).Z;
+
+        demo.OnVehicleControl(new VehicleControlInput(1, 0, 0, 0));
+        for (var i = 0; i < 180; i++) demo.Step(1.0 / 60.0);
+        var laterZ = StateById(transport.Last!, CarDemo.CarRenderIdBase + CarDemo.BodyChildOffset).Z;
+
+        Assert.True(laterZ - startZ > 1d, $"player car did not drive forward: {startZ} -> {laterZ}");
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- Tanks (P3) --------------------------------------------------------
+
+    [Fact]
+    public void Tank_EmitsEveryTankPart_AndAiTanksEngage()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new TankDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var first = transport.Last!;
+        // 13 parts per tank (body/turret/barrel/10 wheels) plus the landmark buildings; the
+        // extra MaxTransformCount headroom is for live projectile records.
+        Assert.Equal((1 + TankDemo.AiTankCount) * 13 + TankDemo.BuildingCount, first.States.Count);
+        Assert.Equal(TankDemo.BuildingCount, first.States.Count(s => s.Id >= TankDemo.BuildingRenderIdBase && s.Id < TankDemo.ProjectileRenderIdBase));
+        Assert.Equal(13, first.States.Count(s =>
+            s.Id >= TankDemo.TankRenderIdBase && s.Id < TankDemo.TankRenderIdBase + TankDemo.TankRenderIdStride));
+
+        // AI tanks drive toward engagement targets after landing.
+        var aiBodyId = TankDemo.TankRenderIdBase + TankDemo.TankRenderIdStride + TankDemo.BodyChildOffset;
+        var aiStart = StateById(first, aiBodyId);
+        for (var i = 1; i < 600; i++) demo.Step(1.0 / 60.0);
+        var aiLater = StateById(transport.Last!, aiBodyId);
+        Assert.True(
+            Math.Abs(aiLater.X - aiStart.X) > 1d || Math.Abs(aiLater.Z - aiStart.Z) > 1d,
+            $"AI tank did not drive: ({aiStart.X}, {aiStart.Z}) -> ({aiLater.X}, {aiLater.Z})");
+
+        // Player fire through the input ring spawns a tracked projectile record.
+        demo.OnTankControl(new TankControlInput(0, 0, 0, 0, 1, 0, 0));
+        demo.Step(1.0 / 60.0);
+        var signal = transport.Last!;
+        Assert.Equal(1, signal.States.Count(s => s.Id >= TankDemo.ProjectileRenderIdBase));
+        Assert.True(signal.States.Count <= TankDemo.MaxTransformCount);
+        foreach (var state in signal.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- Newts (P3) --------------------------------------------------------
+
+    [Fact]
+    public void Newt_EmitsEveryNode_AndBallSquishesThem()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new NewtDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var first = transport.Last!;
+        Assert.InRange(demo.NodeCount, 1, NewtDemo.MaxNodesPerNewt);
+        Assert.Equal(3 + NewtDemo.NewtCount * demo.NodeCount, first.States.Count);
+        Assert.Contains(first.States, s => s.Id == NewtDemo.FloorRenderId);
+        Assert.Contains(first.States, s => s.Id == NewtDemo.BallRenderId);
+        Assert.True(demo.ConstraintCount > 0);
+
+        // The heavy ball falls onto the newts and deforms them.
+        var nodeId = NewtDemo.NodeRenderIdBase;
+        var before = StateById(first, nodeId);
+        for (var i = 1; i < 600; i++) demo.Step(1.0 / 60.0);
+        var after = StateById(transport.Last!, nodeId);
+
+        Assert.True(
+            Math.Abs(after.X - before.X) > 1e-3d || Math.Abs(after.Y - before.Y) > 1e-3d ||
+            Math.Abs(after.Z - before.Z) > 1e-3d,
+            "newt nodes did not move");
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- Characters (P3) ---------------------------------------------------
+
+    [Fact]
+    public void Character_EmitsFixture_AndWalksUnderInput()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new CharacterDemo(null, transport);
+
+        for (var i = 0; i < 90; i++) demo.Step(1.0 / 60.0);
+        var settled = transport.Last!;
+        Assert.Equal(CharacterDemo.MaxTransformCount, settled.States.Count);
+        Assert.Contains(settled.States, s => s.Id == CharacterDemo.CharacterRenderId);
+
+        // Drive south (-Z) through the input ring, away from the dense lego field; the
+        // character must move (sprinting at 4·1.75 m/s means several meters in 3 s).
+        var start = StateById(settled, CharacterDemo.CharacterRenderId);
+        demo.OnCharacterMove(new CharacterMoveInput(0, -1, 0, 1));
+        for (var i = 0; i < 180; i++) demo.Step(1.0 / 60.0);
+        var later = StateById(transport.Last!, CharacterDemo.CharacterRenderId);
+
+        Assert.True(start.Z - later.Z > 2d, $"character did not walk: {start.Z} -> {later.Z}");
+        Assert.True(later.Y > -5d, "character fell through the floor");
+
+        // Jumping must lift the capsule off the ground.
+        demo.OnCharacterMove(new CharacterMoveInput(0, 0, 1, 0));
+        var airborne = false;
+        var groundY = later.Y;
+        for (var i = 0; i < 60 && !airborne; i++)
+        {
+            demo.Step(1.0 / 60.0);
+            airborne = StateById(transport.Last!, CharacterDemo.CharacterRenderId).Y > groundY + 0.1d;
+        }
+
+        Assert.True(airborne, "character did not jump");
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- Sponsors (P3) -----------------------------------------------------
+
+    [Fact]
+    public void Sponsor_EmitsEveryCategory_AndCharactersFlee()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new SponsorDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var first = transport.Last!;
+        Assert.True(demo.HutBodyCount > 0, "no hut bodies created");
+        Assert.Equal(6 + SponsorDemo.NewtCount + SponsorDemo.AiCharacterCount + demo.HutBodyCount, first.States.Count);
+        Assert.Contains(first.States, s => s.Id == SponsorDemo.OverlordRenderId);
+
+        // The character AI is spooked by the hopping newts and must move.
+        var characterId = SponsorDemo.CharacterRenderIdBase;
+        var start = StateById(first, characterId);
+        for (var i = 1; i < 300; i++) demo.Step(1.0 / 60.0);
+        var later = StateById(transport.Last!, characterId);
+
+        Assert.True(
+            Math.Abs(later.X - start.X) > 0.5d || Math.Abs(later.Z - start.Z) > 0.5d,
+            $"character AI did not move: ({start.X}, {start.Z}) -> ({later.X}, {later.Z})");
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
+    // ---- Cloth (P3) --------------------------------------------------------
+
+    [Fact]
+    public void Cloth_EmitsEveryNode_AndCurtainsSettle()
+    {
+        var transport = new CapturingRenderTransport<Transform3DRenderSignal>();
+        using var demo = new ClothDemo(null, transport);
+
+        demo.Step(1.0 / 60.0);
+        var first = transport.Last!;
+        Assert.Equal(ClothDemo.MaxTransformCount, first.States.Count);
+        Assert.Equal(3 + ClothDemo.NodeCount, first.States.Count);
+        Assert.True(demo.ConstraintCount > 0);
+
+        // The bottom-left node of curtain 0 is dynamic (only the top corners are kinematic) and
+        // must fall under gravity.
+        var nodeId = ClothDemo.ClothNodeRenderIdBase + (ClothDemo.CurtainHeight - 1) * ClothDemo.CurtainWidth;
+        var before = StateById(first, nodeId);
+        for (var i = 1; i < 180; i++) demo.Step(1.0 / 60.0);
+        var after = StateById(transport.Last!, nodeId);
+
+        Assert.True(before.Y - after.Y > 5d, $"curtain node did not fall: {before.Y} -> {after.Y}");
+        foreach (var state in transport.Last!.States)
+        {
+            Assert.False(double.IsNaN(state.X) || double.IsNaN(state.Y) || double.IsNaN(state.Z));
+        }
+    }
+
     // ---- Determinism across the ported set ---------------------------------
 
     [Theory]
@@ -679,6 +878,12 @@ public class PortedDemoTests
     [InlineData("sweep")]
     [InlineData("collision-query")]
     [InlineData("solver-contact-enumeration")]
+    [InlineData("car")]
+    [InlineData("tank")]
+    [InlineData("newt")]
+    [InlineData("character")]
+    [InlineData("sponsor")]
+    [InlineData("cloth")]
     public void PortedSet_DeterministicAcrossRuns(string gameKey)
     {
         var first = new CapturingRenderTransport<Transform3DRenderSignal>();
@@ -732,6 +937,12 @@ public class PortedDemoTests
             "sweep" => new SweepDemo(null, transport),
             "collision-query" => new CollisionQueryDemo(null, transport),
             "solver-contact-enumeration" => new SolverContactEnumerationDemo(null, transport),
+            "car" => new CarDemo(null, transport),
+            "tank" => new TankDemo(null, transport),
+            "newt" => new NewtDemo(null, transport),
+            "character" => new CharacterDemo(null, transport),
+            "sponsor" => new SponsorDemo(null, transport),
+            "cloth" => new ClothDemo(null, transport),
             _ => throw new ArgumentOutOfRangeException(nameof(gameKey), gameKey, "unknown demo key"),
         };
 }
